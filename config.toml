@@ -1,0 +1,62 @@
+baseURL = "https://blog.phundrak.com/"
+languageCode = "en-us"
+copyright = "This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License."
+title = "Phundrak’s rambling"
+theme = "m10c"
+paginate = 5
+enableInlineShortcodes = true
+staticDir = ["static"]
+
+summarylength = 10
+enableEmoji = true
+
+[author]
+  name = "Lucien Cartier-Tilet"
+
+[params]
+  author = "Lucien Cartier-Tilet"
+  description = "Some random rambling by a linguistics nerd about Emacs, Linux, and conlanging"
+  avatar = "mahakala.png"
+
+  [[params.social]]
+    name = "github"
+    url = "https://github.com/phundrak"
+
+  [[params.social]]
+    name = "git-merge"
+    url = "https://labs.phundrak.com/phundrak"
+
+  [[params.social]]
+    name = "lind-2"
+    url = "https://phundrak.com"
+
+  [[params.social]]
+    name = "flag"
+    url = "https://langue.phundrak.com"
+
+  [[params.social]]
+    name = "twitter"
+    url = "https://github.com/phundrak"
+
+  [[params.social]]
+    name = "youtube"
+    url = "https://youtube.com/phundrak"
+
+  [[params.social]]
+    name = "instagram"
+    url = "https://instagram.com/phundrak"
+
+  [[params.social]]
+    name = "mail"
+    url = "mailto:lucien@phundrak.com"
+
+  [[params.social]]
+    name = "rss"
+    url = "https://blog.phundrak.com/index.xml"
+
+  [params.style]
+   darkestColor = "#5cac7e"
+   darkColor = "#34495e"
+   primaryColor = "#c5c19b"
+   lightColor = "#eee"
+   lightestColor = "#eee"
