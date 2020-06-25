@@ -1,23 +1,39 @@
 #+title: Phundrak’s Blog
-#+author: Lucien “Phundrak” Cartier-Tilet
++author: Lucien “Phundrak” Cartier-Tilet
 #+hugo_base_dir: ../
 #+hugo_section: ./
 #+hugo_categories: emacs linux conlanging orgmode
+#+options: auto-id:t
 
 * Conlanging                                                       :@conlang:
+  :PROPERTIES:
+  :CUSTOM_ID: Conlanging-686e085f
+  :END:
 ** TODO Writing my conlanging docs with Emacs              :emacs:conlanging:
+   :PROPERTIES:
+   :CUSTOM_ID: Conlanging-Writing_my_conlanging_docs_with_Emacs-9da00fc5
+   :END:
 * Emacs                                                              :@emacs:
+  :PROPERTIES:
+  :CUSTOM_ID: Emacs-39709bf5
+  :END:
 ** [EN] Automatic Meaningful Custom IDs for Org Headings      :emacs:orgmode:
    :PROPERTIES:
    :EXPORT_FILE_NAME: better-custom-ids-orgmode
    :EXPORT_DATE: 2020-06-06
    :export_hugo_menu: :menu "main"
+   :CUSTOM_ID: Emacs-EN_Automatic_Meaningful_Custom_IDs_for_Org_Headings-e0823ff5
    :END:
    Spoiler alert,  I will  just modify  a bit  of code  that already  exists, go
    directly to the  bottom if you want  the solution, or read the  whole post if
    you are interested in how I got there.
 
+   #+TOC: headlines 1 local
+
 *** The issue
+    :PROPERTIES:
+    :CUSTOM_ID: Emacs-EN_Automatic_Meaningful_Custom_IDs_for_Org_Headings-The_issue-f5257919
+    :END:
     About two to three  years ago, as I was working on a  project that was meant
     to be published on the internet, I looked for a solution to get fixed anchor
     links to my various  headings when I performed HTML exports.  As some of you
@@ -101,6 +117,9 @@
     one of my headings manually. So, what to do?
 
 *** A first solution
+    :PROPERTIES:
+    :CUSTOM_ID: Emacs-EN_Automatic_Meaningful_Custom_IDs_for_Org_Headings-A_first_solution-991a2326
+    :END:
     A  first  solution I  found  came  from [[https://writequit.org/articles/emacs-org-mode-generate-ids.html][this  blog  post]],  where Lee  Hinman
     described the very same  issue they had and wrote some  Elisp code to remedy
     that (it’s a great read, go take a look). And it worked, and for some time I
@@ -118,6 +137,9 @@
     Except…
 
 *** These headers are not meaningful
+    :PROPERTIES:
+    :CUSTOM_ID: Emacs-EN_Automatic_Meaningful_Custom_IDs_for_Org_Headings-These_headers_are_not_meaningful-114cccf1
+    :END:
     Ok, alright,  that’s still a  huge step forward, we  don’t have to  type any
     CUSTOM_ID property  manually anymore, it’s  done automatically for  us. But,
     when         I        send         someone        a         link        like
@@ -187,12 +209,13 @@
 
     Next, we have here  the actual generation of the custom ID.  As you can see,
     the ~let~ has  been replaced by a  ~let*~ which allowed me to  create the ID
-    with the variables  ~orgpath~ and ~heading~. The first  one concatenates the
-    path to the  heading, joined by a dash, and  heading concatenates orgpath to
-    the name of the  current heading, joined by a dash if  orgpath is not empty.
-    It will then replace all forward  slashes and spaces by underscores. It then
-    passes ~heading~ as an argument to the function described above to which the
-    unique ID will be concatenated.
+    with the variables ~orgpath~ and ~heading~. The former concatenates the path
+    to the heading joined by dashes, and ~heading~ concatenates ~orgpath~ to the
+    name of the current  heading joined by a dash if ~orgpath~  is not empty. It
+    will then create  a slug out of  the result, deleting some  elements such as
+    forward slashes or tildes, and all whitespace is replaced by underscores. It
+    then passes  ~heading~ as  an argument  to the  function described  above to
+    which the unique ID will be concatenated.
 
     #+BEGIN_SRC emacs-lisp
       (defun eos/org-custom-id-get (&optional pom create prefix)
@@ -207,9 +230,9 @@
         (org-with-point-at pom
           (let* ((orgpath (mapconcat #'identity (org-get-outline-path) "-"))
                  (heading (replace-regexp-in-string
-                           "/" "-"
+                           "/\\|~\\|\\[\\|\\]" ""
                            (replace-regexp-in-string
-                            " " "_" (if (string= orgpath "")
+                            "[[:space:]]+" "_" (if (string= orgpath "")
                                         (org-get-heading t t t t)
                                       (concat orgpath "-" (org-get-heading t t t t))))))
                  (id (org-entry-get nil "CUSTOM_ID")))
@@ -223,6 +246,9 @@
                                           (buffer-file-name (buffer-base-buffer)))
                      id)))))
     #+END_SRC
+
+    #+RESULTS:
+    : eos/org-custom-id-get
 
     The rest of the code is unchanged, here it is anyway:
     #+BEGIN_SRC emacs-lisp
@@ -272,14 +298,23 @@
     #+end_html
 
 * Linux                                                              :@linux:
+  :PROPERTIES:
+  :CUSTOM_ID: Linux-b2218719
+  :END:
 ** [Fr] Tutoriel Git et Github                  :linux:git:tutorial:tutoriel:
    :PROPERTIES:
    :EXPORT_FILE_NAME: tutoriel-git-et-github
    :EXPORT_DATE: 2020-06-05
    :export_hugo_menu: :menu "main"
+   :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-2c516a4f
    :END:
 
+   #+TOC: headlines 1 local
+
 *** Git ? Qu'est-ce donc ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Git ?_Qu'est-ce_donc ?-15ac251c
+    :END:
     Git est un logiciel de version de fichiers permettant de garder une trace de
     toutes les modifications apportées au fichiers suivis dans un répertoire (un
     dépôt) et ses sous-répertoires –sous  couvert qu’ils n’aient pas été ignorés
@@ -296,7 +331,13 @@
     Toujours là ? Tu auras été prévenu·e.
 
 *** Ça a l’air cool, comment ça s’obtient ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ça_a_l’air_cool,_comment_ça_s’obtient ?-e0bdf23a
+    :END:
 **** Et surtout, comment ça s’installe ?
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ça_a_l’air_cool,_comment_ça_s’obtient ?-Et_surtout,_comment_ça_s’installe ?-e6c91540
+     :END:
      Très bonne  question Kevin. Tout  d’abord, il  faut t’assurer que  git soit
      installé sur ton système et  utilisable depuis le terminal. Sous GNU/Linux,
      tu  peux l’installer  via  ton gestionnaire  de paquet,  ce  qui rendra  la
@@ -331,6 +372,9 @@
      de même suivre le tutoriel.
 
 **** Ok c’est bon, et il y a une configuration à faire ?
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ça_a_l’air_cool,_comment_ça_s’obtient ?-Ok_c’est_bon,_et_il_y_a_une_configuration_à_faire ?-0a65ff2b
+     :END:
      Tu  peux  configurer Git  si  tu  le souhaites,  oui.  En  général, il  est
      recommandé  de paramétrer  au moins  son  nom et  son e-mail.  Tu peux  les
      paramétrer via la ligne de commande :
@@ -357,6 +401,9 @@
      ligne sur ~gitconfig~ ne manque pas.
 
 *** Ok très bien, comment on l’utilise maintenant ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-9c66c261
+    :END:
      Du  calme  Jean-Kevin, ralentis  un  peu.  Comme  le  dit ce  vieux  dicton
      Chinois :
      #+begin_quote
@@ -368,6 +415,9 @@
      citation n’est pas extraordinaire. Bref.
 
 **** Je commence comment ?
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-Je_commence_comment ?-b289e367
+     :END:
      Si  tu souhaites  créer  un dépôt  git,  rien  de plus  simple  : créé  ton
      répertoire  dans  lequel tu  travailleras,  et  déplace-y-toi. Ensuite,  tu
      pourra initialiser ton dépôt via la commande ~git init~.
@@ -399,6 +449,9 @@
      Discord).
 
 **** Et pour rajouter des fichiers ?
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-Et_pour_rajouter_des_fichiers ?-2e2eb4bc
+     :END:
      Maintenant  tu  peux commencer  à  travailler  sur  ton projet.  Mais  tout
      d’abord, on va voir ce qu’il se passe  si jamais on créé un fichier dans le
      dépôt. Créé un fichier ~main.c~ dans lequel tu vas entrer ce code :
@@ -466,6 +519,9 @@
      tu sais comment enregistrer des état de ton dépôt via les commits.
 
 **** Cool, mais j’ai accidentellement mis un fichier en staging
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-Cool,_mais_j’ai_accidentellement_mis_un_fichier_en_staging-fabc6773
+     :END:
      Si  jamais tu  as un  staging  que tu  veux  annuler, tu  peux utiliser  la
      commande ~git reset HEAD nomdufichier~ (ou plusieurs noms de fichiers) pour
      annuler le staging. Une fois le fichier qui n’est plus dans ton staging, tu
@@ -508,6 +564,9 @@
      fonctionnalités en plus/.
 
 **** En fait, j’ai juste oublié un truc dans mon commit précédent
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-En_fait,_j’ai_juste_oublié_un_truc_dans_mon_commit_précédent-4fcf76cc
+     :END:
      Si  jamais tu  veux à  la  place ajouter  la modification  d’un fichier  au
      dernier  commit  (mettons, tu  as  oublié  d’ajouter également  un  fichier
      texte),  tu peux  utiliser l’option  ~--amend~  lors du  commit du  fichier
@@ -539,6 +598,9 @@
      taper Ctrl-X. Dans tous les cas, tu aurais dû utiliser Emacs.
 
 **** Euh, j’ai oublié ce que j’ai changé lors du dernier commit
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-Euh,_j’ai_oublié_ce_que_j’ai_changé_lors_du_dernier_commit-426ea6bf
+     :END:
      Pas de panique ! Tu peux entrer la  commande ~git diff~ afin de voir ce que
      tout ce que tu as modifié lors de  ton dernier commit. Et si tu ne souhaite
      voir les modifications que d’un certain  fichier, tu peux ajouter le nom de
@@ -610,6 +672,9 @@
      #+END_SRC
 
 **** Il y a des fichiers dont je me fiche dans mon dépôt
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-Il_y_a_des_fichiers_dont_je_me_fiche_dans_mon_dépôt-30a69d4b
+     :END:
      Dans ce  cas, il est grand  temps de te présenter  le fichier ~.gitignore~.
      Comme son nom l’indique, il permet au dépôt d’ignorer des fichiers selon ce
      que tu  lui indiqueras. Par exemple,  si tu veux ignorer  tous les fichiers
@@ -640,6 +705,9 @@
      ainsi que le fichier ~pubspec.lock~, sans globbing non plus.
 
 **** On est plusieurs dessus en fait…
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-On_est_plusieurs_dessus_en_fait…-ba7d7ecb
+     :END:
      Pas de panique ! Git a été créé pour ça, et il dispose d’une fonctionnalité
      de branchage  permettant d’avoir plusieurs versions  coexistantes d’un même
      fichier.  Cela peut  être très  utile pour  avoir soit  plusieurs personnes
@@ -671,6 +739,9 @@
      #+END_SRC
 
 **** J’ai accidentellement modifié des fichiers sur la mauvaise branche, mais je n’ai pas encore fait de commits.
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-J’ai_accidentellement_modifié_des_fichiers_sur_la_mauvaise_branche,_mais_je_n’ai_pas_encore_fait_de_commits.-1fe34c47
+     :END:
      Tout va bien alors ! Tu vas simplement exécuter cette commande :
      #+BEGIN_SRC text
        $ git stash
@@ -700,6 +771,9 @@
      branche.
 
 **** Du coup, Mathilde a bien avancé sur son code, et moi aussi, chacun sur notre branche. On fait comment maintenant ?
+     :PROPERTIES:
+     :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Ok_très_bien,_comment_on_l’utilise_maintenant ?-Du_coup,_Mathilde_a_bien_avancé_sur_son_code,_et_moi_aussi,_chacun_sur_notre_branche._On_fait_comment_maintenant ?-dc747e9d
+     :END:
      Au bout d’un moment, tu vas sans doute vouloir fusionner deux branches, par
      exemple  tu as  finis  de  développer une  nouvelle  fonctionnalité sur  la
      branche ~nouvelle-branche~ et tu souhaites l’ajouter à la version stable de
@@ -729,6 +803,9 @@
      commit avant de faire ton merge.
 
 *** J’ai entendu parler de Github…
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-J’ai_entendu_parler_de_Github…-a5d23116
+    :END:
     Tu commences à  me plaire Enzo ! Github  est un site web sur  lequel tu peux
     héberger  des  projets libres  ou  open-source  (si  tu  ne connais  pas  la
     différence, voici un article pour t’aider  à comprendre, et un autre pour la
@@ -752,6 +829,9 @@
     à toi de trouver les autres.
 
 *** J’ai téléchargé un projet en zip
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-J’ai_téléchargé_un_projet_en_zip-98d972dc
+    :END:
     Ou bien,  tu peux télécharger  le projet directement  via git. Eh  oui ! git
     permet  de gérer  les  dépôts dits  distants,  c’est à  dire  ceux qui  sont
     hébergés sur un  serveur en ligne, comme par exemple  sur Github. Pour cela,
@@ -775,6 +855,9 @@
     graphique !)
 
 *** Et si je veux créer mon propre dépôt sur Github
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Et_si_je_veux_créer_mon_propre_dépôt_sur_Github-f5f36a7f
+    :END:
     Dans ce cas là, c’est simple Brigitte. Il faut que tu te créés un compte sur
     Github, puis tu cliques sur le bouton ~+~ et ~New Repository~. Tu lui donnes
     le nom que tu souhaites (en l’occurrence je le nomme ~temporary-repo~ car je
@@ -795,6 +878,9 @@
     cloner sur ta machine comme je te l’ai montré avant.
 
 *** Et du coup, comment je met tout ça en ligne ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Et_du_coup,_comment_je_met_tout_ça_en_ligne_?-fbfa443b
+    :END:
     Bon ok, ce n’est  pas aussi simple que ça. Une fois que  tu as lié ton dépôt
     au dépôt distant, il  faudra que tu mettes en ligne tes  commits quand tu en
     auras l’occasion.  Pour ce  faire, tu  n’as qu’à  taper ~git  push~ ;  et la
@@ -834,6 +920,9 @@
     même merde pour Gitlab, Gitea et Cie).
 
 *** Quelqu’un a fait des modifications depuis mon dernier commit, je récupère ça comment ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Quelqu’un_a_fait_des_modifications_depuis_mon_dernier_commit,_je_récupère_ça_comment ?-33e53344
+    :END:
     Pour  faire  un  exemple,  je  viens de  créer  un  ~README.md~  sur  Github
     directement. Ce type  de fichiers est assez standard afin  de présenter plus
     ou moins  en détails le  dépôt et le  projet qui y  est lié, et  son contenu
@@ -859,6 +948,9 @@
     #+END_SRC
 
 *** Je suis en train de travailler sur le même fichier que Ginette
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Je_suis_en_train_de_travailler_sur_le_même_fichier_que_Ginette-d3466e56
+    :END:
     Là, c’est  un problème qui  aurait pu être  évité avec l’usage  des branches
     dont je  t’avais parlé plus  haut, mais visiblement,  vous êtes sur  la même
     branche. Pas bien. Dans ce cas-là, met-toi d’accord avec Ginette pour savoir
@@ -869,6 +961,9 @@
     dans un coin à part et va annuler tes modifications.
 
 *** Github ne veut pas de mes pushs sur le dépôt de Gilberte, oskour !
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Github_ne_veut_pas_de_mes_pushs_sur_le_dépôt_de_Gilberte,_oskour_!-650037f5
+    :END:
     Du calme  Jean-Célestin. Cela  veut tout  simplement dire  que tu  n’as tout
     simplement pas  les droits d’écriture sur  son dépôt. Du coup,  soit tu peux
     lui demander directement à ce qu’elle te donne les droits d’écriture si elle
@@ -876,6 +971,9 @@
     Github depuis ton fork où tu auras fait tes modifications.
 
 *** Fork ? Pull request ? Que font des fourchettes et des pulls dans ce tuto ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Fork_?_Pull_request_?_Que_font_des_fourchettes_et_des_pulls_dans_ce_tuto_?-d36658bb
+    :END:
     Ouhlà Billy,  il va falloir  remettre les choses au  clair. Là il  s’agit de
     quelque chose de spécifique à Github qu’à Git (d’où le fait qu’on en discute
     dans ce chapitre que le précédent).
@@ -901,6 +999,9 @@
     toute la honte du monde qu’il a été refusé.
 
 *** J’ai remarqué un bug ou une erreur, mais je ne peux pas corriger ça moi-même
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-J’ai_remarqué_un_bug_ou_une_erreur,_mais_je_ne_peux_pas_corriger_ça_moi-même-226790d2
+    :END:
     Eh  bien dans  ce cas-là,  ouvre  une /issue/  Bernadette ;  /issue/ qui  en
     français  veut  dire  /problème/.  Il  s’agit  d’un  système  de  Github  te
     permettant de  signaler quelque  chose aux propriétaires  du dépôt,  il peut
@@ -918,6 +1019,9 @@
     le reproduire.
 
 *** Les raccourcis et paramètres de Git
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Les_raccourcis_et_paramètres_de_Git-d799b97f
+    :END:
     Comme j’en avais parlé plus haut, il est possible de configurer git de façon
     un  peu plus  poussée que  simplement déclarer  notre nom  et notre  adresse
     e-mail  dans notre  =~/.gitconfig=. Il  est par  exemple possible  de déclarer
@@ -986,6 +1090,9 @@
     - ~sw~ :: Pour rapidement savoir ce qu’il y a sur le stash.
 
 *** Et c’est tout ?
+    :PROPERTIES:
+    :CUSTOM_ID: Linux-Fr_Tutoriel_Git_et_Github-Et_c’est_tout ?-de7b07f1
+    :END:
     C’est déjà pas mal ! Mais non, ce n’est certainement pas tout. Cependant, ce
     tutoriel n’a pour but de t’apprendre que  les bases de Git et de Github, pas
     de tout  t’apprendre ! Si  tu souhaites aller  plus loin, connaître  plus de
