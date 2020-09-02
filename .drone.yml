@@ -1,0 +1,37 @@
+kind: pipeline
+name: default
+
+steps:
+- name: prepare
+  image: alpine
+  commands:
+    - apk add git
+    - git submodule update --init --recursive
+
+- name: build
+  image: alpine
+  commands:
+    - apk add hugo
+    - mkdir blog
+    - hugo -d blog
+
+- name: deploy
+  image: appleboy/drone-scp
+  settings:
+    host:
+      from_secret: ssh_host
+    target:
+      from_secret: ssh_target
+    source: blog/*
+    username:
+      from_secret: ssh_username
+    password:
+      from_secret: ssh_password
+    port:
+      from_secret: ssh_port
+  when:
+    branch:
+    - master
+    event:
+      exclude:
+      - pull_request
