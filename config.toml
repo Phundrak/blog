@@ -55,8 +55,8 @@ enableEmoji = true
     url = "https://blog.phundrak.com/index.xml"
 
   [params.style]
-   darkestColor = "#5cac7e"
-   darkColor = "#34495e"
-   primaryColor = "#c5c19b"
-   lightColor = "#eee"
-   lightestColor = "#eee"
+   darkestColor = "#2e3440"
+   darkColor = "#4c566a"
+   primaryColor = "#8fbcbb"
+   lightColor = "#d8dee9"
+   lightestColor = "#eceff4"
