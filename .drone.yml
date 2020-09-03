@@ -9,10 +9,11 @@ steps:
     - git submodule update --init --recursive
 
 - name: build
-  image: alpine
+  image: silex/emacs:27-alpine
   commands:
     - apk add hugo
     - mkdir blog
+    - emacs --script .export.el
     - hugo -d blog
 
 - name: deploy
