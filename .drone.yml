@@ -1,17 +1,18 @@
 kind: pipeline
 name: default
 
-steps:
-- name: prepare
-  image: alpine
-  commands:
-    - apk add git
-    - git submodule update --init --recursive
+# steps:
+# - name: prepare
+#   image: alpine
+#   commands:
+#     - apk add git
+#     - git submodule update --init --recursive
 
 - name: build
   image: silex/emacs:27-alpine
   commands:
-    - apk add hugo
+    - apk add hugo git
+    - git submodule update --init --recursive
     - mkdir blog
     - emacs --script .export.el
     - hugo -d blog
