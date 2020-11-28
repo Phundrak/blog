@@ -408,7 +408,7 @@ And with that, we should be good! I used this library in a SOM (Kohonen, 1982) i
 Happy programming!
 
 * Emacs                                                              :@emacs:
-** [EN] Automatic Meaningful Custom IDs for Org Headings      :emacs:orgmode:
+** [EN] Automatic Meaningful Custom IDs for Org Headings :emacs:orgmode:dev:
 :PROPERTIES:
 :EXPORT_FILE_NAME: better-custom-ids-orgmode
 :EXPORT_DATE: 2020-06-06
