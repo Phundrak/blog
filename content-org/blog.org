@@ -6,6 +6,407 @@
 
 * Conlanging                                                       :@conlang:
 ** TODO Writing my conlanging docs with Emacs              :emacs:conlanging:
+* Development                                                          :@dev:
+** [EN] Writing a Dynamic Array in C                                 :dev:C:
+:PROPERTIES:
+:EXPORT_FILE_NAME: writing-dynamic-vector-c
+:EXPORT_DATE: 2020-11-28
+:export_hugo_menu: :menu "main"
+:END:
+Although C is a very, very popular language, it is also known to be quite tiny: memory is handled manually, and much of what is available in its standard library is a given in all other languages. But C being a low level language also means it lacks a lot of other stuff other popular languages have; for instance, dynamic arrays are present in the library of most popular languages, be it JavaScript, C++, Rust and so on, but C’s simplicity forbids them from being there. If you want it in C, you have to implement it –which is exactly what I did!
+
+#+TOC: headlines 1 local
+*** Introduction
+When I wrote this library, I was mostly inspired by C++’s ~std::vector~ and Rust’s ~std::vec::Vec~, but my library lacks some features both have: it’s still a simple one. Here is the list of what it is able to do:
+- Create a dynamic array, with or without an initial capacity specified by the user
+- Store a function pointer to the /destructor/ of the elements that will be stored in the vector for when they are destroyed
+- Append new elements at the end of the array
+- Get elements by position, safely or not, or get the first and last elements in the array
+- Get the length of the vector as well as its capacity
+- Shrink the size of the allocated array to the size of the vector
+- Remove an element at a specific index, or the last element
+- Completely destroy the vector and its elements
+Elements that will be stored in the vector will need to be dynamically allocated in memory since the vector will not store the elements themselves, but rather pointers to them. This way, we avoid copying data when inserting it to the vector, and handling these elements is also a tad easier. And since we do not know what we will be storing, we will be storing void pointers. The user will be able to cast them to their desired type later on.
+
+Before defining the vector, there are a few things I want to define. First, there is an attribute I will often use with my functions:
+#+NAME: vector-nonnull-h
+#+BEGIN_SRC c
+  #indef NONNULL
+  # define NONNULL __attribute__((nonnull))
+  #endif
+#+END_SRC
+This will forbid passing to functions marked with this attribute ~NULL~ pointers, because we will use a lot of them.
+
+We will also need to include some headers:
+- ~assert.h~ :: so we can make sure memory is allocated and reallocated correctly
+- ~string.h~ :: for some memory operations such as ~memcpy~
+#+NAME: vector-includes-c
+#+BEGIN_SRC c
+  #include <assert.h>
+  #include <string.h>
+#+END_SRC
+
+We also need to define a type that will be used as the destructor type. The functions we want to accept as destructors are functions that accept a void pointer to an element and return nothing, hence this definition:
+#+NAME: vector-destructor-type-h
+#+BEGIN_SRC c
+  typedef void (*Destructor)(void *element);
+#+END_SRC
+
+Now, onto the structure itself.
+
+*** The Data Structure of the Vector
+With our vector, we will need to keep track a couple of things:
+- the size of the vector
+- the capacity of the vector
+- the destructor
+- the array itself
+With this, we can describe our structure for the vector:
+#+NAME: vector-struct-def
+#+BEGIN_SRC c
+  struct Vector_s {
+    size_t     capacity;
+    size_t     length;
+    void **    elements;
+    Destructor destructor;
+  };
+  typedef struct Vector_s Vector;
+#+END_SRC
+
+We have now four elements:
+- ~elements~ :: an array of void pointers pointing themselves either to elements stored in the vector or to nothing (initialized to ~NULL~) (note this forbids storing ~NULL~ elements in the vector),
+- ~length~ :: the number of elements currently stored in the vector,
+- ~capacity~ :: the size of the allocated memory pointed to by ~elements~ divided by the size of a void pointer. This gives us the amount of elements that can be stored in the vector without any reallocation /at most/,
+- ~destructor~ :: pointer to the function used to free elements stored in the vector
+
+Now, onto the functions associated with this data structure. They are all prefixed with ~vec_~ in order to avoid any collisions with other libraries and functions.
+
+*** Building Vectors
+The first function for building vectors is ~vec_new()~. Here is its definition:
+#+NAME: vector-vec_new-h
+#+BEGIN_SRC c
+  Vector *vec_new(Destructor const destructor);
+#+END_SRC
+
+It is quite straightforward: when creating a new, standard vector, simply pass as its arguments a pointer to the destructor of this vector, either a ~NULL~ pointer for trivial data types, or a pointer to an existing function you declared somewhere. Once you do that, you get yourself a pointer to the newly created vector with which you can now store elements. Let’s see how it works under the hood:
+#+NAME: vector-vec_new-c
+#+BEGIN_SRC c
+  Vector *vec_new(Destructor const destructor)
+  {
+    Vector *self;
+    self = (Vector *)malloc(sizeof(Vector));
+    assert(self);
+    ,*self = (Vector){.length   = 0,
+                     .capacity = VEC_INITIAL_CAPACITY,
+                     .elements = (void *)malloc(sizeof(void *) * VEC_INITIAL_CAPACITY),
+                     .destroy  = destructor};
+    assert(self->elements);
+    return self;
+  }
+#+END_SRC
+
+A new pointer is created, which will be the pointer returned to the user. To this pointer, we allocate enough memory to hold a vector. Once that is done, we initialize this new memory buffer with an actual vector, with its members initialized as described above. An assertion is done in order to ensure both the vector but also its storage are correctly allocated.
+
+The second function, ~vec_with_capacity~, is quite similar though not the same as ~vec_new~: it allows for an initialization of ~vec_with_capacity~ with a user-defined amount of capacity in the storage of the vector. That is, if ~vec_with_capacity(14)~ is called, the library will return a pointer to a vector which can contain and has the size of precisely fourteen elements. That way, if the user knows they’ll need a certain amount of elements to be stored in a vector, they’ll be able to reserve that exactly and limit the amount of reallocations when adding new elements. Its definition is the following:
+#+NAME: vector-vec_with_capacity-h
+#+BEGIN_SRC c
+  Vector *vec_with_capacity(Destructor const destructor, size_t const capacity);
+#+END_SRC
+
+Under the hood, it calls ~vec_new~, then it will reallocate the memory already allocated for the member ~elemements~.
+#+NAME: vector-vec_with_capacity-c
+#+BEGIN_SRC c
+  Vector *vec_with_capacity(Destructor const t_destructor,
+                            size_t const     t_capacity)
+  {
+    Vector *self = vec_new(t_destructor);
+    free(self->elements);
+    (*self).elements = (void *)malloc(sizeof(void *) * t_capacity);
+    assert(self->elements);
+    (*self).capacity = t_capacity;
+    return self;
+  }
+#+END_SRC
+
+*** Adding Data
+The main feature of vectors is to hold data, so let’s make them able to take new data from the user. But first, let me explain a bit how this dynamic array which I call vector works in C.
+
+As you saw earlier, a vector is initialized with a fixed amount of memory allocated to the vector so people can store their data in these arrays. Now, imagine you have an array of four elements and you wish to add one more, what to do? You can reallocate your array with ~realloc~ with one more slot for your element, so now you have an array for five elements with your four original elements an a free slot for your fifth. Cool, now you can add new elements as you need them!
+
+Except that if you want to add some tens of thousands of new elements, you would end up calling some tens of thousands times ~realloc~, and that is /*slow*/. Seriously, try it, you’ll understand what I mean. And all these calls to ~realloc~ are an opportunity for it to fail. Let’s limit calls to this function, OK ? If we end up short on slots in our current array, let’s actually double the amount of slots in it. So, if we have a four-slots array, let’s make it an eight-slots array, and then a sixteen-slots array. And in a couple more calls to ~realloc~, we’ll quickly reach our tens of thousands slots array, way faster than by incrementing its capacity one by one.
+
+/“But, we’ll end up with a lot of unused memory if we need just one more element than 2^{16} elements! We don’t need a 2^{32} elements array for 2^{16}+1 elements!”/ You’re completely right, but that’s a tradeoff. Would you rather have a slow but memory-efficient program, or a fast but memory-hungry software? Plus, as you’ll see later, there is a function to shrink the size of the allocated array down to the actual amount of elements you stored in it, making it possible to temporarily have a 2^{32} elements array, and immediately after shrink it down to 2^{16}+1, once you know you won’t be adding any other elements.
+
+With this out of the way, let’s see how to add new elements to our vector. First, let’s declare a static function that reallocates the memory of a vector. Here is its declaration:
+#+NAME: vector-vec_realloc-def-c
+#+BEGIN_SRC c
+  static void vec_realloc(Vector *const self) NONNULL;
+#+END_SRC
+
+Its implementation is rather simple: double its capacity, and reallocate its array twice its previous size. Of course, there is an assertion on whether the arrays has been correctly reallocated to ensure memory safety.
+#+NAME: vector-vec_realloc-c
+#+BEGIN_SRC c
+  void vec_realloc(Vector *const self)
+  {
+    self->capacity *= 2;
+    self->elements = realloc(self->elements, sizeof(void *) * vec_capacity(self));
+    assert(self->elements);
+    return;
+  }
+#+END_SRC
+
+Now, we can proceed to element insertion. Here is the definition of ~vec_push~, which adds a new element at the end of the vector:
+#+NAME: vector-vec_push-h
+#+BEGIN_SRC c
+  void   *vec_push(Vector *const self, void *const element) NONNULL;
+#+END_SRC
+
+As you can see, it takes as its arguments a pointer to the vector (the same returned by its constructor) as well as a pointer to the element to be added to the vector. This is an important point: *the vector does not store elements themselves, only their pointer*. If the function detects there is not enough space for a new element, a call will be made to ~vec_realloc~ described above. Once the function is done, it will return a pointer to the newly inserted element.
+#+NAME: vector-vec_push-c
+#+BEGIN_SRC c
+  void *vec_push(Vector *const self, void *const t_element)
+  {
+    if (vec_length(self) >= vec_capacity(self)) {
+      vec_realloc(self);
+    }
+    self->elements[(*self).length++] = t_element;
+    return vec_last(self);
+  }
+#+END_SRC
+
+And this is it! There may be a function added later that will allow the insertion of a new value in any valid position between the first and last position of an array (not counting the unused slots of said array), and if I implement this it will imply a reimplementation of ~vec_push~ so that ~vec_push~ relies of this potential new ~vec_insert~.
+
+*** Retrieving Data
+Two functions are available when retrieving data: ~vec_safe_at~ which safely retrieves the element at a certain index, and ~vec_at~, which is a bit more performant but without the safety of the former. Let’s see the definition of both:
+#+NAME: vector-vec_at-h
+#+BEGIN_SRC c
+  void   *vec_safe_at(Vector const *const self, size_t const index) NONNULL;
+  void   *vec_at(Vector const *const self, size_t const index) NONNULL;
+#+END_SRC
+
+Both have the same arguments: the former is a pointer to the vector we want to manipulate, and the latter is the index at which we want to retrieve our data. To see the difference in how both work, let’s first see the definition of ~vec_at~:
+#+NAME: vector-vec_at-c
+#+BEGIN_SRC c
+  void *vec_at(Vector const *const self, size_t const index)
+  {
+    return self->elements[index];
+  }
+#+END_SRC
+
+~vec_at~ is really straightforward and is just syntax sugar around the vector’s ~elements~ member and will behave exactly like the square brackets in standard C. However, ~vec_safe_at~ performs some additional checks as you can see below:
+#+NAME: vector-vec_safe_at-c
+#+BEGIN_SRC c
+  void *vec_safe_at(Vector const *const self, size_t const t_index)
+  {
+    return (t_index >= vec_length(self)) ? NULL : vec_at(self, t_index);
+  }
+#+END_SRC
+
+If the requested index is larger than the furthest index possible, a ~NULL~ pointer will be returned, otherwise the pointer to the requested element is. With this function, it is possible to check whether an element has been returned or not while avoiding a possible segfault or something similar. It could be used in a loop for instance in order to check we only have valid elements.
+
+It is also possible to retrieve directly the last element with ~vec_last~. Here is its definition:
+#+NAME: vector-vec_last-h
+#+BEGIN_SRC c
+  void   *vec_last(Vector const *const self) NONNULL;
+#+END_SRC
+
+Just as the previous functions, its declaration is really straightforward:
+#+NAME: vector-vec_last-c
+#+BEGIN_SRC c
+  void *vec_last(Vector const *const self)
+  {
+    return vec_at(self, vec_length(self) - 1);
+  }
+#+END_SRC
+
+For the sake of the Object Oriented Programming paradigm, two functions were also declared in order to retrieve some data that could otherwise be easily accessible:
+#+NAME: vector-vec_length_capacity-h
+#+BEGIN_SRC c
+  size_t  vec_length(Vector const *const self) NONNULL;
+  size_t  vec_capacity(Vector const *const self) NONNULL;
+#+END_SRC
+
+Their implementation is extremely trivial and doesn’t really need any explanation.
+#+NAME: vector-vec_length_capacity-c
+#+BEGIN_SRC c
+  size_t vec_length(Vector const *const self)
+  {
+    return self->length;
+  }
+
+  size_t vec_capacity(Vector const *const self)
+  {
+    return self->capacity;
+  }
+#+END_SRC
+
+*** Deleting Data
+While this chapter is about destroying data, this first function will not exactly destroy data, or at least not data we care about: ~vec_shrink_to_fit~ will reallocate the memory in our vector to make it so that the member ~elements~ is exactly large enough to store all of our data with no more space than that. Here is its definition:
+#+NAME: vector-shrink_to_fit-h
+#+BEGIN_SRC c
+  void    vec_shrink_to_fit(Vector *const self) NONNULL;
+#+END_SRC
+
+There’s nothing too exciting about its implementation: a simple reallocation exactly the size of the number of elements currently stored times the size of a void pointer, and we verify with an ~assert~ if it has been correctly reallocated. Nothing is returned.
+#+NAME: vector-shrink_to_fit-c
+#+BEGIN_SRC c
+  void vec_shrink_to_fit(Vector *const self)
+  {
+    if (self->length <= 0) {
+      return;
+    }
+    self->capacity = self->length;
+    self->elements = realloc(self->elements, sizeof(void *) * vec_capacity(self));
+    assert(self->elements);
+    return;
+  }
+#+END_SRC
+
+Notice that a check is done to see if the vector exists, because otherwise calling ~shrink_to_fit~ on an empty vector would result in an error while asserting the reallocation.
+
+Next, we have two functions: ~vec_pop_at~ and ~vec_pop~. The latter relies on the former, which can delete an element at any valid position. *Beware*: these functions return /nothing/ and simply deletes the element. Here is their definition:
+#+NAME: vector-vec_pop-h
+#+BEGIN_SRC c
+  void    vec_pop_at(Vector *const self, size_t const index) NONNULL;
+  void    vec_pop(Vector *const self) NONNULL;
+#+END_SRC
+
+In order to insure memory safety, a static function is declared in ~src/vector.c~ which will delete an element if a destructor has been provided to the vector when it has been built. Its definition is the following:
+#+NAME: vector-vec_maybe_delete_element-def-c
+#+BEGIN_SRC c
+  static void vec_maybe_delete_element(Vector const *self,
+                                       size_t const  t_index) NONNULL;
+#+END_SRC
+
+Its implementation is quite simple: if a destructor exists, then the element at the requested index will be destroyed through this destructor. Otherwise, nothing is done with the destructor, hence the name of the function ~vec_maybe_delete_element~. However it should be noted that the element will be freed from memory, so if the user needs it before popping it, they need to retrieve it with something like ~vec_at~ and store it elsewhere.
+#+NAME: vector-vec_maybe_delete_element-c
+#+BEGIN_SRC c
+  void vec_maybe_delete_element(Vector const *self, size_t const t_index)
+  {
+    void *element = vec_at(self, t_index);
+    if (self->destroy) {
+      self->destroy(element);
+    }
+    free(element);
+  }
+#+END_SRC
+
+Now that we have this function sorted out, we can implement our pops. Here is the implementation of ~vec_pop_at~:
+#+NAME: vector-vec_pop_at-c
+#+BEGIN_SRC c
+  void vec_pop_at(Vector *const t_self, size_t const t_index)
+  {
+    if (vec_safe_at(t_self, t_index) == NULL) {
+      return;
+    }
+    vec_maybe_delete_element(t_self, t_index);
+    if (t_index + 1 < vec_length(t_self)) {
+      memcpy(vec_at(t_self, t_index), vec_at(t_self, t_index + 1),
+             sizeof(void *) * (t_self->length - (t_index + 1)));
+    }
+    --(*t_self).length;
+  }
+#+END_SRC
+
+A check is performed at the beninning of the function: that the element we want to pop actually exists. If it does not, the function does nothing, otherwise the function deletes the element if needed. The call to ~vec_maybe_delete_element~ will free the requested element. Then, a check is performed to see if the requested element was at the end of the array or not. If it was not, then the elements located after the destroyed element are shifted one element closer to the beginning of the array; otherwise, if the requested element was at the end of the array, nothing is done particularly. Lastly, the count of elements stored in the vector is decreased by one.
+
+~vec_pop~ uses the above function in order to provide a simpler call if we want to delete the last element of the array. We can see how it relies on ~vec_pop_at~ in its implementation:
+#+NAME: vector-vec_pop-c
+#+BEGIN_SRC c
+  void vec_pop(Vector *const self)
+  {
+    vec_pop_at(self, vec_length(self));
+  }
+#+END_SRC
+
+Finally, ~vec_delete~ allows for the complete destruction and deallocation of a vector, including all of its elements. Here is its definition:
+#+NAME: vector-vec_delete-h
+#+BEGIN_SRC c
+  void    vec_delete(Vector *const self) NONNULL;
+#+END_SRC
+
+In its implementation, we can see three distinct steps:
+- The deletion of all its elements if a destructor exists
+- The deletion of the array of the vector
+- The deletion of the vector itself.
+#+NAME: vector-vec_delete-c
+#+BEGIN_SRC c
+  void vec_delete(Vector *const self)
+  {
+    if (self->destroy) {
+      for (size_t i = 0; i < vec_length(self); ++i) {
+        self->destroy(self->elements[i]);
+      }
+    }
+    free(self->elements);
+    free(self);
+  }
+#+END_SRC
+
+*** The Final Source Code
+Finally, we can see the whole source code. Here is the header for the library: ~vector.h~
+#+BEGIN_SRC c :noweb yes
+  #ifndef VECTOR_H_
+  #define VECTOR_H_
+
+  <<vector-nonnull-h>>
+
+  <<vector-struct-def>>
+
+  <<vector-vec_new-h>>
+  <<vector-vec_with_capacity-h>>
+  <<vector-vec_push-h>>
+  <<vector-vec_at-h>>
+  <<vector-vec_last-h>>
+  <<vector-vec_length_capacity-h>>
+  <<vector-shrink_to_fit-h>>
+  <<vector-vec_pop-h>>
+  <<vector-vec_delete-h>>
+
+  #endif /* VECTOR_H_ */
+#+END_SRC
+
+And here is the implementation file: ~vector.c~
+#+BEGIN_SRC c :noweb yes
+  #include "vector.h"
+
+  <<vector-includes-c>>
+
+  <<vector-vec_realloc-def-c>>
+  <<vector-vec_maybe_delete_element-def-c>>
+
+  <<vector-vec_new-c>>
+
+  <<vector-vec_with_capacity-c>>
+
+  <<vector-vec_realloc-c>>
+
+  <<vector-vec_push-c>>
+
+  <<vector-vec_at-c>>
+
+  <<vector-vec_safe_at-c>>
+
+  <<vector-vec_last-c>>
+
+  <<vector-vec_length_capacity-c>>
+
+  <<vector-shrink_to_fit-c>>
+
+  <<vector-vec_pop-c>>
+
+  <<vector-vec_maybe_delete_element-c>>
+
+  <<vector-vec_pop_at-c>>
+
+  <<vector-vec_pop-c>>
+
+  <<vector-vec_delete-c>>
+#+END_SRC
+
+And with that, we should be good! I used this library in a SOM (Kohonen, 1982) implementation and ran it through valgrind, and there were no memory leaks. If you find one though, don’t hesitate telling me in the comments, through social media such as Twitter, or by email.
+
+Happy programming!
+
 * Emacs                                                              :@emacs:
 ** [EN] Automatic Meaningful Custom IDs for Org Headings      :emacs:orgmode:
 :PROPERTIES:
