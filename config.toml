@@ -16,7 +16,7 @@ enableEmoji = true
 [params]
   author = "Lucien Cartier-Tilet"
   description = "Some random rambling by a linguistics nerd about Emacs, Linux, and conlanging"
-  avatar = "mahakala.png"
+  avatar = "leon.png"
 
   [[params.social]]
     name = "github"
