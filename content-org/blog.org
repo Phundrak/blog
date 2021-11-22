@@ -13,32 +13,55 @@
 :EXPORT_DATE: 2020-11-28
 :export_hugo_menu: :menu "main"
 :END:
-Although C is a very, very popular language, it is also known to be quite tiny: memory is handled manually, and much of what is available in its standard library is a given in all other languages. But C being a low level language also means it lacks a lot of other stuff other popular languages have; for instance, dynamic arrays are present in the library of most popular languages, be it JavaScript, C++, Rust and so on, but C’s simplicity forbids them from being there. If you want it in C, you have to implement it –which is exactly what I did!
+Although C is a very, very popular language, it is also known to be
+quite tiny: memory is handled manually, and much of what is available
+in its standard library is a given in all other languages. But C being
+a low level language also means it lacks a lot of other stuff other
+popular languages have; for instance, dynamic arrays are present in
+the library of most popular languages, be it JavaScript, C++, Rust and
+so on, but C’s simplicity forbids them from being there. If you want
+it in C, you have to implement it –which is exactly what I did!
 
 #+TOC: headlines 1 local
 *** Introduction
-When I wrote this library, I was mostly inspired by C++’s ~std::vector~ and Rust’s ~std::vec::Vec~, but my library lacks some features both have: it’s still a simple one. Here is the list of what it is able to do:
-- Create a dynamic array, with or without an initial capacity specified by the user
-- Store a function pointer to the /destructor/ of the elements that will be stored in the vector for when they are destroyed
+When I wrote this library, I was mostly inspired by C++’s ~std::vector~
+and Rust’s ~std::vec::Vec~, but my library lacks some features both
+have: it’s still a simple one. Here is the list of what it is able to
+do:
+- Create a dynamic array, with or without an initial capacity
+  specified by the user
+- Store a function pointer to the /destructor/ of the elements that will
+  be stored in the vector for when they are destroyed
 - Append new elements at the end of the array
-- Get elements by position, safely or not, or get the first and last elements in the array
+- Get elements by position, safely or not, or get the first and last
+  elements in the array
 - Get the length of the vector as well as its capacity
 - Shrink the size of the allocated array to the size of the vector
 - Remove an element at a specific index, or the last element
 - Completely destroy the vector and its elements
-Elements that will be stored in the vector will need to be dynamically allocated in memory since the vector will not store the elements themselves, but rather pointers to them. This way, we avoid copying data when inserting it to the vector, and handling these elements is also a tad easier. And since we do not know what we will be storing, we will be storing void pointers. The user will be able to cast them to their desired type later on.
 
-Before defining the vector, there are a few things I want to define. First, there is an attribute I will often use with my functions:
+Elements that will be stored in the vector will need to be dynamically
+allocated in memory since the vector will not store the elements
+themselves, but rather pointers to them. This way, we avoid copying
+data when inserting it to the vector, and handling these elements is
+also a tad easier. And since we do not know what we will be storing,
+we will be storing void pointers. The user will be able to cast them
+to their desired type later on.
+
+Before defining the vector, there are a few things I want to define.
+First, there is an attribute I will often use with my functions:
 #+NAME: vector-nonnull-h
 #+BEGIN_SRC c
   #indef NONNULL
   # define NONNULL __attribute__((nonnull))
   #endif
 #+END_SRC
-This will forbid passing to functions marked with this attribute ~NULL~ pointers, because we will use a lot of them.
+This will forbid passing to functions marked with this attribute ~NULL~
+pointers, because we will use a lot of them.
 
 We will also need to include some headers:
-- ~assert.h~ :: so we can make sure memory is allocated and reallocated correctly
+- ~assert.h~ :: so we can make sure memory is allocated and reallocated
+  correctly
 - ~string.h~ :: for some memory operations such as ~memcpy~
 #+NAME: vector-includes-c
 #+BEGIN_SRC c
@@ -46,7 +69,10 @@ We will also need to include some headers:
   #include <string.h>
 #+END_SRC
 
-We also need to define a type that will be used as the destructor type. The functions we want to accept as destructors are functions that accept a void pointer to an element and return nothing, hence this definition:
+We also need to define a type that will be used as the destructor
+type. The functions we want to accept as destructors are functions
+that accept a void pointer to an element and return nothing, hence
+this definition:
 #+NAME: vector-destructor-type-h
 #+BEGIN_SRC c
   typedef void (*Destructor)(void *element);
@@ -73,21 +99,35 @@ With this, we can describe our structure for the vector:
 #+END_SRC
 
 We have now four elements:
-- ~elements~ :: an array of void pointers pointing themselves either to elements stored in the vector or to nothing (initialized to ~NULL~) (note this forbids storing ~NULL~ elements in the vector),
+- ~elements~ :: an array of void pointers pointing themselves either to
+  elements stored in the vector or to nothing (initialized to ~NULL~)
+  (note this forbids storing ~NULL~ elements in the vector),
 - ~length~ :: the number of elements currently stored in the vector,
-- ~capacity~ :: the size of the allocated memory pointed to by ~elements~ divided by the size of a void pointer. This gives us the amount of elements that can be stored in the vector without any reallocation /at most/,
-- ~destructor~ :: pointer to the function used to free elements stored in the vector
+- ~capacity~ :: the size of the allocated memory pointed to by ~elements~
+  divided by the size of a void pointer. This gives us the amount of
+  elements that can be stored in the vector without any reallocation
+  /at most/,
+- ~destructor~ :: pointer to the function used to free elements stored
+  in the vector
 
-Now, onto the functions associated with this data structure. They are all prefixed with ~vec_~ in order to avoid any collisions with other libraries and functions.
+Now, onto the functions associated with this data structure. They are
+all prefixed with ~vec_~ in order to avoid any collisions with other
+libraries and functions.
 
 *** Building Vectors
-The first function for building vectors is ~vec_new()~. Here is its definition:
+The first function for building vectors is ~vec_new()~. Here is its
+definition:
 #+NAME: vector-vec_new-h
 #+BEGIN_SRC c
   Vector *vec_new(Destructor const destructor);
 #+END_SRC
 
-It is quite straightforward: when creating a new, standard vector, simply pass as its arguments a pointer to the destructor of this vector, either a ~NULL~ pointer for trivial data types, or a pointer to an existing function you declared somewhere. Once you do that, you get yourself a pointer to the newly created vector with which you can now store elements. Let’s see how it works under the hood:
+It is quite straightforward: when creating a new, standard vector,
+simply pass as its arguments a pointer to the destructor of this
+vector, either a ~NULL~ pointer for trivial data types, or a pointer to
+an existing function you declared somewhere. Once you do that, you get
+yourself a pointer to the newly created vector with which you can now
+store elements. Let’s see how it works under the hood:
 #+NAME: vector-vec_new-c
 #+BEGIN_SRC c
   Vector *vec_new(Destructor const destructor)
@@ -104,15 +144,30 @@ It is quite straightforward: when creating a new, standard vector, simply pass a
   }
 #+END_SRC
 
-A new pointer is created, which will be the pointer returned to the user. To this pointer, we allocate enough memory to hold a vector. Once that is done, we initialize this new memory buffer with an actual vector, with its members initialized as described above. An assertion is done in order to ensure both the vector but also its storage are correctly allocated.
+A new pointer is created, which will be the pointer returned to the
+user. To this pointer, we allocate enough memory to hold a vector.
+Once that is done, we initialize this new memory buffer with an actual
+vector, with its members initialized as described above. An assertion
+is done in order to ensure both the vector but also its storage are
+correctly allocated.
 
-The second function, ~vec_with_capacity~, is quite similar though not the same as ~vec_new~: it allows for an initialization of ~vec_with_capacity~ with a user-defined amount of capacity in the storage of the vector. That is, if ~vec_with_capacity(14)~ is called, the library will return a pointer to a vector which can contain and has the size of precisely fourteen elements. That way, if the user knows they’ll need a certain amount of elements to be stored in a vector, they’ll be able to reserve that exactly and limit the amount of reallocations when adding new elements. Its definition is the following:
+The second function, ~vec_with_capacity~, is quite similar though not
+the same as ~vec_new~: it allows for an initialization of
+~vec_with_capacity~ with a user-defined amount of capacity in the
+storage of the vector. That is, if ~vec_with_capacity(14)~ is called,
+the library will return a pointer to a vector which can contain and
+has the size of precisely fourteen elements. That way, if the user
+knows they’ll need a certain amount of elements to be stored in a
+vector, they’ll be able to reserve that exactly and limit the amount
+of reallocations when adding new elements. Its definition is the
+following:
 #+NAME: vector-vec_with_capacity-h
 #+BEGIN_SRC c
   Vector *vec_with_capacity(Destructor const destructor, size_t const capacity);
 #+END_SRC
 
-Under the hood, it calls ~vec_new~, then it will reallocate the memory already allocated for the member ~elemements~.
+Under the hood, it calls ~vec_new~, then it will reallocate the memory
+already allocated for the member ~elemements~.
 #+NAME: vector-vec_with_capacity-c
 #+BEGIN_SRC c
   Vector *vec_with_capacity(Destructor const t_destructor,
@@ -128,21 +183,51 @@ Under the hood, it calls ~vec_new~, then it will reallocate the memory already a
 #+END_SRC
 
 *** Adding Data
-The main feature of vectors is to hold data, so let’s make them able to take new data from the user. But first, let me explain a bit how this dynamic array which I call vector works in C.
+The main feature of vectors is to hold data, so let’s make them able
+to take new data from the user. But first, let me explain a bit how
+this dynamic array which I call vector works in C.
 
-As you saw earlier, a vector is initialized with a fixed amount of memory allocated to the vector so people can store their data in these arrays. Now, imagine you have an array of four elements and you wish to add one more, what to do? You can reallocate your array with ~realloc~ with one more slot for your element, so now you have an array for five elements with your four original elements an a free slot for your fifth. Cool, now you can add new elements as you need them!
+As you saw earlier, a vector is initialized with a fixed amount of
+memory allocated to the vector so people can store their data in these
+arrays. Now, imagine you have an array of four elements and you wish
+to add one more, what to do? You can reallocate your array with
+~realloc~ with one more slot for your element, so now you have an array
+for five elements with your four original elements an a free slot for
+your fifth. Cool, now you can add new elements as you need them!
 
-Except that if you want to add some tens of thousands of new elements, you would end up calling some tens of thousands times ~realloc~, and that is /*slow*/. Seriously, try it, you’ll understand what I mean. And all these calls to ~realloc~ are an opportunity for it to fail. Let’s limit calls to this function, OK ? If we end up short on slots in our current array, let’s actually double the amount of slots in it. So, if we have a four-slots array, let’s make it an eight-slots array, and then a sixteen-slots array. And in a couple more calls to ~realloc~, we’ll quickly reach our tens of thousands slots array, way faster than by incrementing its capacity one by one.
+Except that if you want to add some tens of thousands of new elements,
+you would end up calling some tens of thousands times ~realloc~, and
+that is /*slow*/. Seriously, try it, you’ll understand what I mean. And
+all these calls to ~realloc~ are an opportunity for it to fail. Let’s
+limit calls to this function, OK ? If we end up short on slots in our
+current array, let’s actually double the amount of slots in it. So, if
+we have a four-slots array, let’s make it an eight-slots array, and
+then a sixteen-slots array. And in a couple more calls to ~realloc~,
+we’ll quickly reach our tens of thousands slots array, way faster than
+by incrementing its capacity one by one.
 
-/“But, we’ll end up with a lot of unused memory if we need just one more element than 2^{16} elements! We don’t need a 2^{32} elements array for 2^{16}+1 elements!”/ You’re completely right, but that’s a tradeoff. Would you rather have a slow but memory-efficient program, or a fast but memory-hungry software? Plus, as you’ll see later, there is a function to shrink the size of the allocated array down to the actual amount of elements you stored in it, making it possible to temporarily have a 2^{32} elements array, and immediately after shrink it down to 2^{16}+1, once you know you won’t be adding any other elements.
+/“But, we’ll end up with a lot of unused memory if we need just one  more element than 2^{16} elements! We don’t need a 2^{32} elements array for 2^{16}+1 elements!”/
 
-With this out of the way, let’s see how to add new elements to our vector. First, let’s declare a static function that reallocates the memory of a vector. Here is its declaration:
+You’re completely right, but that’s a tradeoff. Would you rather have
+a slow but memory-efficient program, or a fast but memory-hungry
+software? Plus, as you’ll see later, there is a function to shrink the
+size of the allocated array down to the actual amount of elements you
+stored in it, making it possible to temporarily have a 2^{32} elements
+array, and immediately after shrink it down to 2^{16}+1, once you know
+you won’t be adding any other elements.
+
+With this out of the way, let’s see how to add new elements to our
+vector. First, let’s declare a static function that reallocates the
+memory of a vector. Here is its declaration:
 #+NAME: vector-vec_realloc-def-c
 #+BEGIN_SRC c
   static void vec_realloc(Vector *const self) NONNULL;
 #+END_SRC
 
-Its implementation is rather simple: double its capacity, and reallocate its array twice its previous size. Of course, there is an assertion on whether the arrays has been correctly reallocated to ensure memory safety.
+Its implementation is rather simple: double its capacity, and
+reallocate its array twice its previous size. Of course, there is an
+assertion on whether the arrays has been correctly reallocated to
+ensure memory safety.
 #+NAME: vector-vec_realloc-c
 #+BEGIN_SRC c
   void vec_realloc(Vector *const self)
@@ -154,13 +239,20 @@ Its implementation is rather simple: double its capacity, and reallocate its arr
   }
 #+END_SRC
 
-Now, we can proceed to element insertion. Here is the definition of ~vec_push~, which adds a new element at the end of the vector:
+Now, we can proceed to element insertion. Here is the definition of
+~vec_push~, which adds a new element at the end of the vector:
 #+NAME: vector-vec_push-h
 #+BEGIN_SRC c
   void   *vec_push(Vector *const self, void *const element) NONNULL;
 #+END_SRC
 
-As you can see, it takes as its arguments a pointer to the vector (the same returned by its constructor) as well as a pointer to the element to be added to the vector. This is an important point: *the vector does not store elements themselves, only their pointer*. If the function detects there is not enough space for a new element, a call will be made to ~vec_realloc~ described above. Once the function is done, it will return a pointer to the newly inserted element.
+As you can see, it takes as its arguments a pointer to the vector (the
+same returned by its constructor) as well as a pointer to the element
+to be added to the vector. This is an important point: *the vector does
+not store elements themselves, only their pointer*. If the function
+detects there is not enough space for a new element, a call will be
+made to ~vec_realloc~ described above. Once the function is done, it
+will return a pointer to the newly inserted element.
 #+NAME: vector-vec_push-c
 #+BEGIN_SRC c
   void *vec_push(Vector *const self, void *const t_element)
@@ -173,17 +265,27 @@ As you can see, it takes as its arguments a pointer to the vector (the same retu
   }
 #+END_SRC
 
-And this is it! There may be a function added later that will allow the insertion of a new value in any valid position between the first and last position of an array (not counting the unused slots of said array), and if I implement this it will imply a reimplementation of ~vec_push~ so that ~vec_push~ relies of this potential new ~vec_insert~.
+And this is it! There may be a function added later that will allow
+the insertion of a new value in any valid position between the first
+and last position of an array (not counting the unused slots of said
+array), and if I implement this it will imply a reimplementation of
+~vec_push~ so that ~vec_push~ relies of this potential new ~vec_insert~.
 
 *** Retrieving Data
-Two functions are available when retrieving data: ~vec_safe_at~ which safely retrieves the element at a certain index, and ~vec_at~, which is a bit more performant but without the safety of the former. Let’s see the definition of both:
+Two functions are available when retrieving data: ~vec_safe_at~ which
+safely retrieves the element at a certain index, and ~vec_at~, which is
+a bit more performant but without the safety of the former. Let’s see
+the definition of both:
 #+NAME: vector-vec_at-h
 #+BEGIN_SRC c
   void   *vec_safe_at(Vector const *const self, size_t const index) NONNULL;
   void   *vec_at(Vector const *const self, size_t const index) NONNULL;
 #+END_SRC
 
-Both have the same arguments: the former is a pointer to the vector we want to manipulate, and the latter is the index at which we want to retrieve our data. To see the difference in how both work, let’s first see the definition of ~vec_at~:
+Both have the same arguments: the former is a pointer to the vector we
+want to manipulate, and the latter is the index at which we want to
+retrieve our data. To see the difference in how both work, let’s first
+see the definition of ~vec_at~:
 #+NAME: vector-vec_at-c
 #+BEGIN_SRC c
   void *vec_at(Vector const *const self, size_t const index)
@@ -192,7 +294,10 @@ Both have the same arguments: the former is a pointer to the vector we want to m
   }
 #+END_SRC
 
-~vec_at~ is really straightforward and is just syntax sugar around the vector’s ~elements~ member and will behave exactly like the square brackets in standard C. However, ~vec_safe_at~ performs some additional checks as you can see below:
+~vec_at~ is really straightforward and is just syntax sugar around the
+vector’s ~elements~ member and will behave exactly like the square
+brackets in standard C. However, ~vec_safe_at~ performs some additional
+checks as you can see below:
 #+NAME: vector-vec_safe_at-c
 #+BEGIN_SRC c
   void *vec_safe_at(Vector const *const self, size_t const t_index)
@@ -201,9 +306,15 @@ Both have the same arguments: the former is a pointer to the vector we want to m
   }
 #+END_SRC
 
-If the requested index is larger than the furthest index possible, a ~NULL~ pointer will be returned, otherwise the pointer to the requested element is. With this function, it is possible to check whether an element has been returned or not while avoiding a possible segfault or something similar. It could be used in a loop for instance in order to check we only have valid elements.
+If the requested index is larger than the furthest index possible, a
+~NULL~ pointer will be returned, otherwise the pointer to the requested
+element is. With this function, it is possible to check whether an
+element has been returned or not while avoiding a possible segfault or
+something similar. It could be used in a loop for instance in order to
+check we only have valid elements.
 
-It is also possible to retrieve directly the last element with ~vec_last~. Here is its definition:
+It is also possible to retrieve directly the last element with
+~vec_last~. Here is its definition:
 #+NAME: vector-vec_last-h
 #+BEGIN_SRC c
   void   *vec_last(Vector const *const self) NONNULL;
@@ -218,14 +329,17 @@ Just as the previous functions, its declaration is really straightforward:
   }
 #+END_SRC
 
-For the sake of the Object Oriented Programming paradigm, two functions were also declared in order to retrieve some data that could otherwise be easily accessible:
+For the sake of the Object Oriented Programming paradigm, two
+functions were also declared in order to retrieve some data that could
+otherwise be easily accessible:
 #+NAME: vector-vec_length_capacity-h
 #+BEGIN_SRC c
   size_t  vec_length(Vector const *const self) NONNULL;
   size_t  vec_capacity(Vector const *const self) NONNULL;
 #+END_SRC
 
-Their implementation is extremely trivial and doesn’t really need any explanation.
+Their implementation is extremely trivial and doesn’t really need any
+explanation.
 #+NAME: vector-vec_length_capacity-c
 #+BEGIN_SRC c
   size_t vec_length(Vector const *const self)
@@ -240,13 +354,20 @@ Their implementation is extremely trivial and doesn’t really need any explanat
 #+END_SRC
 
 *** Deleting Data
-While this chapter is about destroying data, this first function will not exactly destroy data, or at least not data we care about: ~vec_shrink_to_fit~ will reallocate the memory in our vector to make it so that the member ~elements~ is exactly large enough to store all of our data with no more space than that. Here is its definition:
+While this chapter is about destroying data, this first function will
+not exactly destroy data, or at least not data we care about:
+~vec_shrink_to_fit~ will reallocate the memory in our vector to make it
+so that the member ~elements~ is exactly large enough to store all of
+our data with no more space than that. Here is its definition:
 #+NAME: vector-shrink_to_fit-h
 #+BEGIN_SRC c
   void    vec_shrink_to_fit(Vector *const self) NONNULL;
 #+END_SRC
 
-There’s nothing too exciting about its implementation: a simple reallocation exactly the size of the number of elements currently stored times the size of a void pointer, and we verify with an ~assert~ if it has been correctly reallocated. Nothing is returned.
+There’s nothing too exciting about its implementation: a simple
+reallocation exactly the size of the number of elements currently
+stored times the size of a void pointer, and we verify with an ~assert~
+if it has been correctly reallocated. Nothing is returned.
 #+NAME: vector-shrink_to_fit-c
 #+BEGIN_SRC c
   void vec_shrink_to_fit(Vector *const self)
@@ -261,23 +382,37 @@ There’s nothing too exciting about its implementation: a simple reallocation e
   }
 #+END_SRC
 
-Notice that a check is done to see if the vector exists, because otherwise calling ~shrink_to_fit~ on an empty vector would result in an error while asserting the reallocation.
+Notice that a check is done to see if the vector exists, because
+otherwise calling ~shrink_to_fit~ on an empty vector would result in an
+error while asserting the reallocation.
 
-Next, we have two functions: ~vec_pop_at~ and ~vec_pop~. The latter relies on the former, which can delete an element at any valid position. *Beware*: these functions return /nothing/ and simply deletes the element. Here is their definition:
+Next, we have two functions: ~vec_pop_at~ and ~vec_pop~. The latter relies
+on the former, which can delete an element at any valid position.
+*Beware*: these functions return /nothing/ and simply deletes the element.
+Here is their definition:
 #+NAME: vector-vec_pop-h
 #+BEGIN_SRC c
   void    vec_pop_at(Vector *const self, size_t const index) NONNULL;
   void    vec_pop(Vector *const self) NONNULL;
 #+END_SRC
 
-In order to insure memory safety, a static function is declared in ~src/vector.c~ which will delete an element if a destructor has been provided to the vector when it has been built. Its definition is the following:
+In order to insure memory safety, a static function is declared in
+~src/vector.c~ which will delete an element if a destructor has been
+provided to the vector when it has been built. Its definition is the
+following:
 #+NAME: vector-vec_maybe_delete_element-def-c
 #+BEGIN_SRC c
   static void vec_maybe_delete_element(Vector const *self,
                                        size_t const  t_index) NONNULL;
 #+END_SRC
 
-Its implementation is quite simple: if a destructor exists, then the element at the requested index will be destroyed through this destructor. Otherwise, nothing is done with the destructor, hence the name of the function ~vec_maybe_delete_element~. However it should be noted that the element will be freed from memory, so if the user needs it before popping it, they need to retrieve it with something like ~vec_at~ and store it elsewhere.
+Its implementation is quite simple: if a destructor exists, then the
+element at the requested index will be destroyed through this
+destructor. Otherwise, nothing is done with the destructor, hence the
+name of the function ~vec_maybe_delete_element~. However it should be
+noted that the element will be freed from memory, so if the user needs
+it before popping it, they need to retrieve it with something like
+~vec_at~ and store it elsewhere.
 #+NAME: vector-vec_maybe_delete_element-c
 #+BEGIN_SRC c
   void vec_maybe_delete_element(Vector const *self, size_t const t_index)
@@ -290,7 +425,8 @@ Its implementation is quite simple: if a destructor exists, then the element at 
   }
 #+END_SRC
 
-Now that we have this function sorted out, we can implement our pops. Here is the implementation of ~vec_pop_at~:
+Now that we have this function sorted out, we can implement our pops.
+Here is the implementation of ~vec_pop_at~:
 #+NAME: vector-vec_pop_at-c
 #+BEGIN_SRC c
   void vec_pop_at(Vector *const t_self, size_t const t_index)
@@ -307,9 +443,20 @@ Now that we have this function sorted out, we can implement our pops. Here is th
   }
 #+END_SRC
 
-A check is performed at the beninning of the function: that the element we want to pop actually exists. If it does not, the function does nothing, otherwise the function deletes the element if needed. The call to ~vec_maybe_delete_element~ will free the requested element. Then, a check is performed to see if the requested element was at the end of the array or not. If it was not, then the elements located after the destroyed element are shifted one element closer to the beginning of the array; otherwise, if the requested element was at the end of the array, nothing is done particularly. Lastly, the count of elements stored in the vector is decreased by one.
+A check is performed at the beninning of the function: that the
+element we want to pop actually exists. If it does not, the function
+does nothing, otherwise the function deletes the element if needed.
+The call to ~vec_maybe_delete_element~ will free the requested element.
+Then, a check is performed to see if the requested element was at the
+end of the array or not. If it was not, then the elements located
+after the destroyed element are shifted one element closer to the
+beginning of the array; otherwise, if the requested element was at the
+end of the array, nothing is done particularly. Lastly, the count of
+elements stored in the vector is decreased by one.
 
-~vec_pop~ uses the above function in order to provide a simpler call if we want to delete the last element of the array. We can see how it relies on ~vec_pop_at~ in its implementation:
+~vec_pop~ uses the above function in order to provide a simpler call if
+we want to delete the last element of the array. We can see how it
+relies on ~vec_pop_at~ in its implementation:
 #+NAME: vector-vec_pop-c
 #+BEGIN_SRC c
   void vec_pop(Vector *const self)
@@ -318,7 +465,9 @@ A check is performed at the beninning of the function: that the element we want 
   }
 #+END_SRC
 
-Finally, ~vec_delete~ allows for the complete destruction and deallocation of a vector, including all of its elements. Here is its definition:
+Finally, ~vec_delete~ allows for the complete destruction and
+deallocation of a vector, including all of its elements. Here is its
+definition:
 #+NAME: vector-vec_delete-h
 #+BEGIN_SRC c
   void    vec_delete(Vector *const self) NONNULL;
@@ -343,7 +492,8 @@ In its implementation, we can see three distinct steps:
 #+END_SRC
 
 *** The Final Source Code
-Finally, we can see the whole source code. Here is the header for the library: ~vector.h~
+Finally, we can see the whole source code. Here is the header for the
+library: ~vector.h~
 #+BEGIN_SRC c :noweb yes
   #ifndef VECTOR_H_
   #define VECTOR_H_
@@ -403,7 +553,10 @@ And here is the implementation file: ~vector.c~
   <<vector-vec_delete-c>>
 #+END_SRC
 
-And with that, we should be good! I used this library in a SOM (Kohonen, 1982) implementation and ran it through valgrind, and there were no memory leaks. If you find one though, don’t hesitate telling me in the comments, through social media such as Twitter, or by email.
+And with that, we should be good! I used this library in a SOM
+(Kohonen, 1982) implementation and ran it through valgrind, and there
+were no memory leaks. If you find one though, don’t hesitate telling
+me in the comments, through social media such as Twitter, or by email.
 
 Happy programming!
 
@@ -414,12 +567,26 @@ Happy programming!
 :EXPORT_DATE: 2020-06-06
 :export_hugo_menu: :menu "main"
 :END:
-Spoiler alert, I will just modify a bit of code that already exists, go directly to the bottom if you want the solution, or read the whole post if you are interested in how I got there.
+Spoiler alert, I will just modify a bit of code that already exists,
+go directly to the bottom if you want the solution, or read the whole
+post if you are interested in how I got there.
 
 #+TOC: headlines 1 local
 
+**** Update 2021-11-22
+I’ve put the code presented here as a complete package. You can find
+it in [[https://labs.phundrak.com/phundrak/org-unique-id][this repository]] or in its [[https://github.com/Phundrak/org-unique-id][Github mirror]] (be aware the latter may
+not be as up-to-date as the former is. Installation instructions are
+in the README.
+
 *** The issue
-About two to three years ago, as I was working on a project that was meant to be published on the internet, I looked for a solution to get fixed anchor links to my various headings when I performed HTML exports. As some of you may know, by default when an Org file is exported to an HTML file, a random ID will be generated for each header, and this ID will be used as their anchor. Here’s a quick example of a simple org file:
+About two to three years ago, as I was working on a project that was
+meant to be published on the internet, I looked for a solution to get
+fixed anchor links to my various headings when I performed HTML
+exports. As some of you may know, by default when an Org file is
+exported to an HTML file, a random ID will be generated for each
+header, and this ID will be used as their anchor. Here’s a quick
+example of a simple org file:
 
 #+caption: Example org file
 #+begin_src org :exports code
@@ -434,7 +601,8 @@ About two to three years ago, as I was working on a project that was meant to be
      Some other stuff
 #+end_src
 
-And this is the result once exported to HTML (with a lot of noise removed from ~<head>~):
+And this is the result once exported to HTML (with a lot of noise
+removed from ~<head>~):
 
 #+caption: Output HTML file
 #+BEGIN_SRC html
@@ -487,19 +655,61 @@ And this is the result once exported to HTML (with a lot of noise removed from ~
   </html>
 #+END_SRC
 
-As you can see, all the anchors are in the fomat of ~org[a-f0-9]{7}~. First, this is not really meaningful if you want to read the anchor and guess where it will lead you. But secondly, these anchors will change each time you export your Org file to HTML. If I want to share a URL to my website and to a specific heading,… well I can’t, it will change the next time I update the document. And I don’t want to have to set a ~CUSTOM_ID~ property for each one of my headings manually. So, what to do?
+As you can see, all the anchors are in the fomat of ~org[a-f0-9]{7}~.
+First, this is not really meaningful if you want to read the anchor
+and guess where it will lead you. But secondly, these anchors will
+change each time you export your Org file to HTML. If I want to share
+a URL to my website and to a specific heading,… well I can’t, it will
+change the next time I update the document. And I don’t want to have
+to set a ~CUSTOM_ID~ property for each one of my headings manually. So,
+what to do?
 
 *** A first solution
-A first solution I found came from [[https://writequit.org/articles/emacs-org-mode-generate-ids.html][this blog post]], where Lee Hinman described the very same issue they had and wrote some Elisp code to remedy that (it’s a great read, go take a look). And it worked, and for some time I used their code in my Emacs configuration file in order to generate unique custom IDs for my Org headers. Basically what the code does is it detects if ~auto-id:t~ is set in an ~#+OPTIONS~ header. If it is, then it will iterate over all of the Org headers, and for each one of them it will insert a ~CUSTOM_ID~, which is made from a UUID generated by Emacs. And tada! we get for each header a ~h-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}~ custom ID that won’t change next time we export our Org file to HTML when we save our file, and only for headings which don’t already have a ~CUSTOM_ID~ property. Wohoo!
+A first solution I found came from [[https://writequit.org/articles/emacs-org-mode-generate-ids.html][this blog post]], where Lee Hinman
+described the very same issue they had and wrote some Elisp code to
+remedy that (it’s a great read, go take a look). And it worked, and
+for some time I used their code in my Emacs configuration file in
+order to generate unique custom IDs for my Org headers. Basically what
+the code does is it detects if ~auto-id:t~ is set in an ~#+OPTIONS~
+header. If it is, then it will iterate over all of the Org headers,
+and for each one of them it will insert a ~CUSTOM_ID~, which is made
+from a UUID generated by Emacs. And tada! we get for each header a
+~h-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}~ custom
+ID that won’t change next time we export our Org file to HTML when we
+save our file, and only for headings which don’t already have a
+~CUSTOM_ID~ property. Wohoo!
 
 Except…
 
 *** These headers are not meaningful
-Ok, alright, that’s still a huge step forward, we don’t have to type any ~CUSTOM_ID~ property manually anymore, it’s done automatically for us. But, when I send someone a link like ~https://langue.phundrak.com/eittland#h-76fc0b91-e41c-42ad-8652-bba029632333~, the first reaction to this URL is often something along the lines of “What the fuck?”. And they’re right, this URL is unreadable when it comes to the anchor. How am I supposed to guess it links to the description of the vowels of the Eittlandic language? (That’s a constructed language I’m working on, you won’t find anything about it outside my website.)
+Ok, alright, that’s still a huge step forward, we don’t have to type
+any ~CUSTOM_ID~ property manually anymore, it’s done automatically for
+us. But, when I send someone a link like
+~https://langue.phundrak.com/eittland#h-76fc0b91-e41c-42ad-8652-bba029632333~,
+the first reaction to this URL is often something along the lines of
+“What the fuck?”. And they’re right, this URL is unreadable when it
+comes to the anchor. How am I supposed to guess it links to the
+description of the vowels of the Eittlandic language? (That’s a
+constructed language I’m working on, you won’t find anything about it
+outside my website.)
 
-So, I went back to my configuration file for Emacs, and through some trial and error, I finally found a way to get a consistent custom ID which is readable and automatically set. With the current state of my code, what you get is the complete path of the Org heading, all spaces replaced by underscores and headings separated by dashes, with a final unique identifier taken from an Emacs-generated UUID. Now, the same link as above will look like ~https://langue.phundrak.com/eittland#Aperçu_structurel-Inventaire_phonétique_et_orthographe-Voyelles_pures-84f05c2c~. It won’t be more readable to you if you don’t speak French, but you can guess it is way better than what we had before. I even added a safety net by replacing all forward slashes with dashes. The last ID is here to ensure the path will be unique in case we’d have two identical paths in the org file for one reason or another.
+So, I went back to my configuration file for Emacs, and through some
+trial and error, I finally found a way to get a consistent custom ID
+which is readable and automatically set. With the current state of my
+code, what you get is the complete path of the Org heading, all spaces
+replaced by underscores and headings separated by dashes, with a final
+unique identifier taken from an Emacs-generated UUID. Now, the same
+link as above will look like
+~https://langue.phundrak.com/eittland#Aperçu_structurel-Inventaire_phonétique_et_orthographe-Voyelles_pures-84f05c2c~.
+It won’t be more readable to you if you don’t speak French, but you
+can guess it is way better than what we had before. I even added a
+safety net by replacing all forward slashes with dashes. The last ID
+is here to ensure the path will be unique in case we’d have two
+identical paths in the org file for one reason or another.
 
-The modifications I made to the first function ~eos/org-id-new~ are minimal, where I just split the UUID and get its first part. This is basically a way to simplify it.
+The modifications I made to the first function ~eos/org-id-new~ are
+minimal, where I just split the UUID and get its first part. This is
+basically a way to simplify it.
 #+BEGIN_SRC emacs-lisp
   (defun eos/org-id-new (&optional prefix)
     "Create a new globally unique ID.
@@ -539,7 +749,15 @@ The modifications I made to the first function ~eos/org-id-new~ are minimal, whe
       (concat prefix (car (split-string unique "-")))))
 #+END_SRC
 
-Next, we have here the actual generation of the custom ID. As you can see, the ~let~ has been replaced by a ~let*~ which allowed me to create the ID with the variables ~orgpath~ and ~heading~. The former concatenates the path to the heading joined by dashes, and ~heading~ concatenates ~orgpath~ to the name of the current heading joined by a dash if ~orgpath~ is not empty. It will then create a slug out of the result, deleting some elements such as forward slashes or tildes, and all whitespace is replaced by underscores. It then passes ~heading~ as an argument to the function described above to which the unique ID will be concatenated.
+Next, we have here the actual generation of the custom ID. As you can
+see, the ~let~ has been replaced by a ~let*~ which allowed me to create
+the ID with the variables ~orgpath~ and ~heading~. The former concatenates
+the path to the heading joined by dashes, and ~heading~ concatenates
+~orgpath~ to the name of the current heading joined by a dash if ~orgpath~
+is not empty. It will then create a slug out of the result, deleting
+some elements such as forward slashes or tildes, and all whitespace is
+replaced by underscores. It then passes ~heading~ as an argument to the
+function described above to which the unique ID will be concatenated.
 #+BEGIN_SRC emacs-lisp
   (defun eos/org-custom-id-get (&optional pom create prefix)
     "Get the CUSTOM_ID property of the entry at point-or-marker POM.
@@ -598,13 +816,19 @@ The rest of the code is unchanged, here it is anyway:
                             (eos/org-add-ids-to-headlines-in-file))))))
 #+END_SRC
 
-Note that you *will need* the package ~org-id~ to make this code work. You simply need to add the following code before the code I shared above:
+Note that you *will need* the package ~org-id~ to make this code work. You
+simply need to add the following code before the code I shared above:
 #+BEGIN_SRC emacs-lisp
   (require 'org-id)
   (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
 #+END_SRC
 
-And that’s how my links are now way more readable *and* persistent! The only downside I found to this is when you move headings and their path is modified, or when you modify the heading itself, the custom ID is not automatically updated. I could fix that by regenerating the custom ID on each save, regardless of whether a custom ID already exists or not, but it’s at the risk an ID manually set will get overwritten.
+And that’s how my links are now way more readable *and* persistent! The
+only downside I found to this is when you move headings and their path
+is modified, or when you modify the heading itself, the custom ID is
+not automatically updated. I could fix that by regenerating the custom
+ID on each save, regardless of whether a custom ID already exists or
+not, but it’s at the risk an ID manually set will get overwritten.
 
 #+begin_html
 <script defer src="https://commento.phundrak.com/js/commento.js"></script>
@@ -621,15 +845,32 @@ And that’s how my links are now way more readable *and* persistent! The only d
 #+TOC: headlines 1 local
 
 *** Git ? Qu'est-ce donc ?
-Git est un logiciel de version de fichiers permettant de garder une trace de toutes les modifications apportées au fichiers suivis dans un répertoire (un dépôt) et ses sous-répertoires –sous couvert qu’ils n’aient pas été ignorés explicitement. Il permet également de conserver plusieurs versions parallèles du projet, comme par exemple une version stable et une version de développement, et permet l’ajout de modifications d’une de ces versions parallèles à une autre via des fusions partielles ou totales de branches, avec une automatisation des fusions de fichiers lorsqu’il n’y a pas de conflit entre ces derniers.
+Git est un logiciel de version de fichiers permettant de garder une
+trace de toutes les modifications apportées au fichiers suivis dans un
+répertoire (un dépôt) et ses sous-répertoires –sous couvert qu’ils
+n’aient pas été ignorés explicitement. Il permet également de
+conserver plusieurs versions parallèles du projet, comme par exemple
+une version stable et une version de développement, et permet l’ajout
+de modifications d’une de ces versions parallèles à une autre via des
+fusions partielles ou totales de branches, avec une automatisation des
+fusions de fichiers lorsqu’il n’y a pas de conflit entre ces derniers.
 
-Avant de continuer, sache que je suis bilingue français-sarcasme, si tu es du genre à t’énerver pour un rien, cette page est à haut risque pour toi.
+Avant de continuer, sache que je suis bilingue français-sarcasme, si
+tu es du genre à t’énerver pour un rien, cette page est à haut risque
+pour toi.
 
 Toujours là ? Tu auras été prévenu·e.
 
 *** Ça a l’air cool, comment ça s’obtient ?
 **** Et surtout, comment ça s’installe ?
-Très bonne question Kevin. Tout d’abord, il faut t’assurer que git soit installé sur ton système et utilisable depuis le terminal. Sous GNU/Linux, tu peux l’installer via ton gestionnaire de paquet, ce qui rendra la commande accessible directement depuis le terminal. Tu auras sans doute besoin de préfixer la commande avec ~sudo~. Si tu n’as pas les droits pour utiliser ~sudo~, demande à celui qui a les droits (ton administrateur système ou ton papa (j’avais prévenu que je n’allais pas être sympa dans ce tutoriel)).
+Très bonne question Kevin. Tout d’abord, il faut t’assurer que git
+soit installé sur ton système et utilisable depuis le terminal. Sous
+GNU/Linux, tu peux l’installer via ton gestionnaire de paquet, ce qui
+rendra la commande accessible directement depuis le terminal. Tu auras
+sans doute besoin de préfixer la commande avec ~sudo~. Si tu n’as pas
+les droits pour utiliser ~sudo~, demande à celui qui a les droits (ton
+administrateur système ou ton papa (j’avais prévenu que je n’allais
+pas être sympa dans ce tutoriel)).
 #+BEGIN_SRC sh
   $ apt install git                    # Debian, Ubuntu et les distros basées dessus
   $ yum install git                    # CentOS
@@ -641,17 +882,24 @@ Très bonne question Kevin. Tout d’abord, il faut t’assurer que git soit ins
 #+CAPTION: >install gentoo
 [[./img/install-gentoo.jpg]]
 
-Si tu n’es pas sous GNU/Linux mais que tu as au moins le goût d’être sous un OS de type Unix, tu peux exécuter la commande correspondante à ton OS suivant :
+Si tu n’es pas sous GNU/Linux mais que tu as au moins le goût d’être
+sous un OS de type Unix, tu peux exécuter la commande correspondante à
+ton OS suivant :
 #+BEGIN_SRC sh
   $ pkg install git                                     # FreeBSD
   $ brew install git                                    # macOS avec brew
   $ port install git +svn +doc +bash_completion +gitweb # macOS avec MacPorts
 #+END_SRC
 
-Si tu es sous Windows, soit tu utilises le WSL (Windows Subsystem for Linux), soit… bonne chance. Toutes les commandes seront en syntaxe Unix dans ce tutoriel, mais si tu as bien deux neurones, tu devrais pouvoir tout de même suivre le tutoriel.
+Si tu es sous Windows, soit tu utilises le WSL (Windows Subsystem for
+Linux), soit… bonne chance. Toutes les commandes seront en syntaxe
+Unix dans ce tutoriel, mais si tu as bien deux neurones, tu devrais
+pouvoir tout de même suivre le tutoriel.
 
 **** Ok c’est bon, et il y a une configuration à faire ?
-Tu peux configurer Git si tu le souhaites, oui. En général, il est recommandé de paramétrer au moins son nom et son e-mail. Tu peux les paramétrer via la ligne de commande :
+Tu peux configurer Git si tu le souhaites, oui. En général, il est
+recommandé de paramétrer au moins son nom et son e-mail. Tu peux les
+paramétrer via la ligne de commande :
 #+BEGIN_SRC sh
   $ git config --global user.name "Kévin Masturbin"
   $ git config --global user.email "kevin.du.neuftrwa@hotmail.com"
@@ -664,21 +912,31 @@ Tu peux aussi éditer le fichier =~/.gitconfig= comme suit :
        name = Ton nom
 #+END_SRC
 
-Cela permettra d’associer ton nom et ton adresse mail à tes commits. Par défaut, ceux qui sont enregistrés avec ton compte utilisateur de ton PC sont mis par défaut dans ces paramètres, mais on met quasiment tous un nom à la con quand on le créé. Et ça permet d’avoir les même paramètres si tu es sur un autre ordinateur.
+Cela permettra d’associer ton nom et ton adresse mail à tes commits.
+Par défaut, ceux qui sont enregistrés avec ton compte utilisateur de
+ton PC sont mis par défaut dans ces paramètres, mais on met quasiment
+tous un nom à la con quand on le créé. Et ça permet d’avoir les même
+paramètres si tu es sur un autre ordinateur.
 
-Il y a encore pas mal de paramètres que tu peux gérer avec ce fichier, je reparlerai de certains plus tard, mais pour le reste, la documentation en ligne sur ~gitconfig~ ne manque pas.
+Il y a encore pas mal de paramètres que tu peux gérer avec ce fichier,
+je reparlerai de certains plus tard, mais pour le reste, la
+documentation en ligne sur ~gitconfig~ ne manque pas.
 
 *** Ok très bien, comment on l’utilise maintenant ?
-Du calme Jean-Kevin, ralentis un peu. Comme le dit ce vieux dicton Chinois :
+Du calme Jean-Kevin, ralentis un peu. Comme le dit ce vieux dicton
+Chinois :
 #+begin_quote
 Celui qui marche  trop vite…… marche…………… trop… vite…?  C’est compliqué les
 dictons chinois…
 #+end_quote
 
-De toutes façons, ce dicton est une contrefaçon, donc la qualité de la citation n’est pas extraordinaire. Bref.
+De toutes façons, ce dicton est une contrefaçon, donc la qualité de la
+citation n’est pas extraordinaire. Bref.
 
 **** Je commence comment ?
-Si tu souhaites créer un dépôt git, rien de plus simple : créé ton répertoire dans lequel tu travailleras, et déplace-y-toi. Ensuite, tu pourra initialiser ton dépôt via la commande ~git init~.
+Si tu souhaites créer un dépôt git, rien de plus simple : créé ton
+répertoire dans lequel tu travailleras, et déplace-y-toi. Ensuite, tu
+pourra initialiser ton dépôt via la commande ~git init~.
 #+BEGIN_SRC text
   $ mkdir monsuperprojet
   $ cd monsuperprojet
@@ -686,7 +944,11 @@ Si tu souhaites créer un dépôt git, rien de plus simple : créé ton réperto
   Initialized empty Git repository in /tmp/monsuperprojet/.git/
 #+END_SRC
 
-Si tu obtiens à peu près le même message après la dernière commande, félicitations ! Tu viens de créer ton premier dépôt git. En l’occurrence, j’ai créé mon dépôt dans ~/tmp~, mais toi tu peux voir un truc du genre ~/home/corentin/monsuperprojet~ à la place. Tu peux vérifier que tout va bien en rentrant la commande ~git status~.
+Si tu obtiens à peu près le même message après la dernière commande,
+félicitations ! Tu viens de créer ton premier dépôt git. En
+l’occurrence, j’ai créé mon dépôt dans ~/tmp~, mais toi tu peux voir un
+truc du genre ~/home/corentin/monsuperprojet~ à la place. Tu peux
+vérifier que tout va bien en rentrant la commande ~git status~.
 #+BEGIN_SRC text
   $ git status
   On branch master
@@ -696,10 +958,17 @@ Si tu obtiens à peu près le même message après la dernière commande, félic
   nothing to commit (create/copy files and use "git add" to track)
 #+END_SRC
 
-Parfait ! Ah, et ne met rien d’important dans ~/tmp~, ce dossier est réinitialisé à chaque redémarrage de ta machine. Ou alors, met-y uniquement des fichiers que tu ne souhaites avoir que temporairement sur ta machine (comme ce meme que tu télécharges depuis Reddit pour le reposter sur Discord).
+Parfait ! Ah, et ne met rien d’important dans ~/tmp~, ce dossier est
+réinitialisé à chaque redémarrage de ta machine. Ou alors, met-y
+uniquement des fichiers que tu ne souhaites avoir que temporairement
+sur ta machine (comme ce meme que tu télécharges depuis Reddit pour le
+reposter sur Discord).
 
 **** Et pour rajouter des fichiers ?
-Maintenant tu peux commencer à travailler sur ton projet. Mais tout d’abord, on va voir ce qu’il se passe si jamais on créé un fichier dans le dépôt. Créé un fichier ~main.c~ dans lequel tu vas entrer ce code :
+Maintenant tu peux commencer à travailler sur ton projet. Mais tout
+d’abord, on va voir ce qu’il se passe si jamais on créé un fichier
+dans le dépôt. Créé un fichier ~main.c~ dans lequel tu vas entrer ce
+code :
 #+BEGIN_SRC c
   #include <stdio.h>
 
@@ -724,7 +993,9 @@ Bref, si tu exécutes à nouveau git status, tu obtients cette sortie :
   nothing added to commit but untracked files present (use "git add" to track)
 #+END_SRC
 
-Tu commences à comprendre un peu le bail ? Git vient de détecter qu’un nouveau fichier a été créé qu’il ne connaissait pas avant. Suivons ses bon conseils et ajoutons le fichier au dépôt.
+Tu commences à comprendre un peu le bail ? Git vient de détecter qu’un
+nouveau fichier a été créé qu’il ne connaissait pas avant. Suivons ses
+bon conseils et ajoutons le fichier au dépôt.
 #+BEGIN_SRC text
   $ git add main.c
   $ git status
@@ -738,7 +1009,14 @@ Tu commences à comprendre un peu le bail ? Git vient de détecter qu’un nouv
           new file:   main.c
 #+END_SRC
 
-Super, maintenant git va surveiller les changements du fichier, mais attention, il n’a pas encore enregistré son état. Pour l’instant il sait juste que le fichier est là, dans un certain état, mais rien ne garanti encore qu’on pourra retrouver cet état plus tard. On appelle ça le /staging/. Pour ce faire, il faut créer ce qu’on appelle un /commit/. En gros, il s’agit d’un enregistrement des modifications apportées à un ou plusieurs fichiers (dans leur globalité ou partiellement, on verra ça plus tard), le tout avec un commentaire.
+Super, maintenant git va surveiller les changements du fichier, mais
+attention, il n’a pas encore enregistré son état. Pour l’instant il
+sait juste que le fichier est là, dans un certain état, mais rien ne
+garanti encore qu’on pourra retrouver cet état plus tard. On appelle
+ça le /staging/. Pour ce faire, il faut créer ce qu’on appelle un
+/commit/. En gros, il s’agit d’un enregistrement des modifications
+apportées à un ou plusieurs fichiers (dans leur globalité ou
+partiellement, on verra ça plus tard), le tout avec un commentaire.
 #+BEGIN_SRC text
   $ git commit -m "Un petit pas pour moi, un grand pas pour mon projet"
   [master (root-commit) 89139ef] Un petit pas pour moi, un grand pas pour mon projet
@@ -746,10 +1024,22 @@ Super, maintenant git va surveiller les changements du fichier, mais attention, 
    create mode 100644 main.c
 #+END_SRC
 
-Parfait ! Certains éléments peuvent être un peu différent chez toi, comme par exemple la référence du commit juste avant le message. Ça, c’est un truc qui est géré automatiquement par git. Et voilà, on a l’état de notre répertoire qui est enregistré et qui sera disponible plus tard. Maintenant, tu sais comment enregistrer des état de ton dépôt via les commits.
+Parfait ! Certains éléments peuvent être un peu différent chez toi,
+comme par exemple la référence du commit juste avant le message. Ça,
+c’est un truc qui est géré automatiquement par git. Et voilà, on a
+l’état de notre répertoire qui est enregistré et qui sera disponible
+plus tard. Maintenant, tu sais comment enregistrer des état de ton
+dépôt via les commits.
 
 **** Cool, mais j’ai accidentellement mis un fichier en staging
-Si jamais tu as un staging que tu veux annuler, tu peux utiliser la commande ~git reset HEAD nomdufichier~ (ou plusieurs noms de fichiers) pour annuler le staging. Une fois le fichier qui n’est plus dans ton staging, tu peux même annuler toutes les modifications que tu as apporté au fichier depuis ton dernier commit avec la commande ~git checkout -- nomdufichier~, et tu peux aussi mettre plusieurs noms de fichiers. Par exemple, si j’ai modifié mon ~main.c~ en modifiant ainsi les arguments du ~main()~ :
+Si jamais tu as un staging que tu veux annuler, tu peux utiliser la
+commande ~git reset HEAD nomdufichier~ (ou plusieurs noms de fichiers)
+pour annuler le staging. Une fois le fichier qui n’est plus dans ton
+staging, tu peux même annuler toutes les modifications que tu as
+apporté au fichier depuis ton dernier commit avec la commande ~git
+checkout -- nomdufichier~, et tu peux aussi mettre plusieurs noms de
+fichiers. Par exemple, si j’ai modifié mon ~main.c~ en modifiant ainsi
+les arguments du ~main()~ :
 #+BEGIN_SRC c
   #include <stdio.h>
 
@@ -772,12 +1062,24 @@ Je peux annuler tout ça via ces commandes :
 
 Si je fait un ~cat main.c~, je vois qu’il est revenu à son état initial.
 
-Et petite remarque concernant les arguments de la fonction ~main~ en C : on peut leur donner le nom que l’on souhaite (personellement j’aime bien parfois metre ~ac~ et ~av~ au lieu de ~argc~ et ~argv~), ça ne changera strictement rien au comportement du code. Et si l’on ne souhaite pas utiliser les arguments reçus par le ~main~, on peut simplement déclarer la fonction main comme ~main(void)~. Au moins, c’est clair pour le compilateur et le lecteur du code : on s’en fiche des arguments du ~main~.
+Et petite remarque concernant les arguments de la fonction ~main~ en C :
+on peut leur donner le nom que l’on souhaite (personellement j’aime
+bien parfois metre ~ac~ et ~av~ au lieu de ~argc~ et ~argv~), ça ne changera
+strictement rien au comportement du code. Et si l’on ne souhaite pas
+utiliser les arguments reçus par le ~main~, on peut simplement déclarer
+la fonction main comme ~main(void)~. Au moins, c’est clair pour le
+compilateur et le lecteur du code : on s’en fiche des arguments du
+~main~.
 
-Par contre, chose importante : mettre void en arguments du main est du C, *et ce n’est pas valide en C++*. /Le C++ n’est pas du C avec des fonctionnalités en plus/.
+Par contre, chose importante : mettre void en arguments du main est du
+C, *et ce n’est pas valide en C++*. /Le C++ n’est pas du C avec des
+fonctionnalités en plus/.
 
 **** En fait, j’ai juste oublié un truc dans mon commit précédent
-Si jamais tu veux à la place ajouter la modification d’un fichier au dernier commit (mettons, tu as oublié d’ajouter également un fichier texte), tu peux utiliser l’option ~--amend~ lors du commit du fichier oublié.
+Si jamais tu veux à la place ajouter la modification d’un fichier au
+dernier commit (mettons, tu as oublié d’ajouter également un fichier
+texte), tu peux utiliser l’option ~--amend~ lors du commit du fichier
+oublié.
 #+BEGIN_SRC text
   $ git add main.c # J’ai refait les modifications annulées plus tôt
   $ git commit -m "second commit"
@@ -792,10 +1094,23 @@ Si jamais tu veux à la place ajouter la modification d’un fichier au dernier 
   create mode 100644 projet.txt
 #+END_SRC
 
-En gros, le commit que tu viens de faire a remplacé le précédent en conservant les informations du commit précédent, mis à part son commentaire. Si tu ne met pas l’option ~-m "ton texte"~ lors de l’amendement du commit, ton éditeur texte par défaut va s’ouvrir pour que tu puisses modifier le texte du commit précédent si tu le souhaite. Si jamais vim s’ouvre et que tu n’as aucune idée de comment sortir de cet enfant du démon, tu as juste à appuyer sur la touche Échap (au cas où), puis à taper ~:wq~ (~w~ pour écrire le fichier, ~q~ pour quitter), puis tu appuie sur la touche Entrée. Si tu as Nano qui s’est ouvert, alors il faut taper Ctrl-X. Dans tous les cas, tu aurais dû utiliser Emacs.
+En gros, le commit que tu viens de faire a remplacé le précédent en
+conservant les informations du commit précédent, mis à part son
+commentaire. Si tu ne met pas l’option ~-m "ton texte"~ lors de
+l’amendement du commit, ton éditeur texte par défaut va s’ouvrir pour
+que tu puisses modifier le texte du commit précédent si tu le
+souhaite. Si jamais vim s’ouvre et que tu n’as aucune idée de comment
+sortir de cet enfant du démon, tu as juste à appuyer sur la touche
+Échap (au cas où), puis à taper ~:wq~ (~w~ pour écrire le fichier, ~q~ pour
+quitter), puis tu appuie sur la touche Entrée. Si tu as Nano qui s’est
+ouvert, alors il faut taper Ctrl-X. Dans tous les cas, tu aurais dû
+utiliser Emacs.
 
 **** Euh, j’ai oublié ce que j’ai changé lors du dernier commit
-Pas de panique ! Tu peux entrer la commande ~git diff~ afin de voir ce que tout ce que tu as modifié lors de ton dernier commit. Et si tu ne souhaite voir les modifications que d’un certain fichier, tu peux ajouter le nom de ton fichier à la fin de la commande.
+Pas de panique ! Tu peux entrer la commande ~git diff~ afin de voir ce
+que tout ce que tu as modifié lors de ton dernier commit. Et si tu ne
+souhaite voir les modifications que d’un certain fichier, tu peux
+ajouter le nom de ton fichier à la fin de la commande.
 #+BEGIN_SRC text
   $ echo "C’est un super projet !" > projet.txt
   $ git diff
@@ -808,7 +1123,9 @@ Pas de panique ! Tu peux entrer la commande ~git diff~ afin de voir ce que tout
   +C’est un super projet !
 #+END_SRC
 
-Tu peux également voir les différences de fichiers entre deux commits en entrant leur référence. Pour avoir la référence, tu peux rentrer la commande ~git log~ pour avoir un petit historique des commits.
+Tu peux également voir les différences de fichiers entre deux commits
+en entrant leur référence. Pour avoir la référence, tu peux rentrer la
+commande ~git log~ pour avoir un petit historique des commits.
 #+BEGIN_SRC text
   $ git log
   commit 4380d8717261644b81a1858920406645cf409028 (HEAD -> master)
@@ -830,7 +1147,9 @@ Tu peux également voir les différences de fichiers entre deux commits en entra
       Un petit pas pour moi, un grand pas pour mon projet
 #+END_SRC
 
-Bon, c’est un peu long et un peu trop d’infos d’un coup, généralement je préfère taper ~git log --oneline --graph --decorate~ afin d’avoir un affichage comme suit :
+Bon, c’est un peu long et un peu trop d’infos d’un coup, généralement
+je préfère taper ~git log --oneline --graph --decorate~ afin d’avoir un
+affichage comme suit :
 #+BEGIN_SRC text
   $ git log --oneline --graph --decorate
   ,* 4380d87 (HEAD -> master) new commit
@@ -838,7 +1157,8 @@ Bon, c’est un peu long et un peu trop d’infos d’un coup, généralement je
   ,* 89139ef Un petit pas pour moi, un grand pas pour mon projet
 #+END_SRC
 
-Plus propre, non ? Et les références sont plus courtes, ce qui est plus agréable à taper. Allez, comparons les deux derniers commits.
+Plus propre, non ? Et les références sont plus courtes, ce qui est
+plus agréable à taper. Allez, comparons les deux derniers commits.
 #+BEGIN_SRC text
   $ git add .
   $ git commit -m "new commit"
@@ -857,28 +1177,62 @@ Plus propre, non ? Et les références sont plus courtes, ce qui est plus agré
 #+END_SRC
 
 **** Il y a des fichiers dont je me fiche dans mon dépôt
-Dans ce cas, il est grand temps de te présenter le fichier ~.gitignore~. Comme son nom l’indique, il permet au dépôt d’ignorer des fichiers selon ce que tu lui indiqueras. Par exemple, si tu veux ignorer tous les fichiers qui se terminent en ~.out~ (ou ~.exe~ sous Windows), tu peux éditer (ou créer) ton ~.gitignore~ et entrer ces lignes :
+Dans ce cas, il est grand temps de te présenter le fichier ~.gitignore~.
+Comme son nom l’indique, il permet au dépôt d’ignorer des fichiers
+selon ce que tu lui indiqueras. Par exemple, si tu veux ignorer tous
+les fichiers qui se terminent en ~.out~ (ou ~.exe~ sous Windows), tu peux
+éditer (ou créer) ton ~.gitignore~ et entrer ces lignes :
 #+BEGIN_SRC gitignore
-  ,*.out
-  ,*.exe
+,*.out
+,*.exe
 #+END_SRC
 
-Maintenant, si tu créés un fichier en ~.out~ ou ~.exe~, il sera complètement ignoré par git et ne sera pas stocké dans l’historique des versions. Il s’agit de ce qu’on appelle du globbing. En gros, l’étoile indique que tu t’en fiches de ce qu’il y a devant ~.out~ ou ~.exe~ dans cet exemple, si quelque chose se termine par ça, c’est ignoré. Pour ignorer quelque chose dans un dossier, tu pourrais avoir quelque chose du genre ~mondossier/*~ et POUF, tous les fichiers de ~mondossier/~ sont ignorés. En gros, le globbing va fonctionner comme le globbing de ton shell (Bash, Zsh, Fish,…)
+Maintenant, si tu créés un fichier en ~.out~ ou ~.exe~, il sera
+complètement ignoré par git et ne sera pas stocké dans l’historique
+des versions. Il s’agit de ce qu’on appelle du globbing. En gros,
+l’étoile indique que tu t’en fiches de ce qu’il y a devant ~.out~ ou
+~.exe~ dans cet exemple, si quelque chose se termine par ça, c’est
+ignoré. Pour ignorer quelque chose dans un dossier, tu pourrais avoir
+quelque chose du genre ~mondossier/*~ et POUF, tous les fichiers de
+~mondossier/~ sont ignorés. En gros, le globbing va fonctionner comme le
+globbing de ton shell (Bash, Zsh, Fish,…)
 
-Par exemple, [[https://labs.phundrak.com/phundrak/langue-phundrak-com/commit/f8ec1936f839e9e95a6badf4480589f5bc9d00a0][voici un dépôt]] un peu plus complexe que ce qu’on est en train de faire (figé lors d’un commit fixé). Tu peux voir dans mon ~.gitignore~ qu’il y a pas mal d’extensions de fichiers qui sont ignorées, mais j’ai aussi ~_minted*~ et ~auto-generated*~ qui sont des dossiers ignorés, et pas juste leur contenu qui est ignoré (l’étoile est là pour ignorer tous les dossiers dont le nom commence par ce qui précède l’étoile). J’ai aussi ignoré le dossier ~.dart_tool/~ qui lui pour le coup n’a pas de globbing, ainsi que le fichier ~pubspec.lock~, sans globbing non plus.
+Par exemple, [[https://labs.phundrak.com/phundrak/langue-phundrak-com/commit/f8ec1936f839e9e95a6badf4480589f5bc9d00a0][voici un dépôt]] un peu plus complexe que ce qu’on est en
+train de faire (figé lors d’un commit fixé). Tu peux voir dans mon
+~.gitignore~ qu’il y a pas mal d’extensions de fichiers qui sont
+ignorées, mais j’ai aussi ~_minted*~ et ~auto-generated*~ qui sont des
+dossiers ignorés, et pas juste leur contenu qui est ignoré (l’étoile
+est là pour ignorer tous les dossiers dont le nom commence par ce qui
+précède l’étoile). J’ai aussi ignoré le dossier ~.dart_tool/~ qui lui
+pour le coup n’a pas de globbing, ainsi que le fichier ~pubspec.lock~,
+sans globbing non plus.
 
 **** On est plusieurs dessus en fait…
-Pas de panique ! Git a été créé pour ça, et il dispose d’une fonctionnalité de branchage permettant d’avoir plusieurs versions coexistantes d’un même fichier. Cela peut être très utile pour avoir soit plusieurs personnes travaillant sur un même projet, soit pour une même personne travaillant sur plusieurs fonctionnalités différentes, soit les deux. Ainsi, on a plusieurs version indépendantes que l’on pourra fusionner plus tard.
+Pas de panique ! Git a été créé pour ça, et il dispose d’une
+fonctionnalité de branchage permettant d’avoir plusieurs versions
+coexistantes d’un même fichier. Cela peut être très utile pour avoir
+soit plusieurs personnes travaillant sur un même projet, soit pour une
+même personne travaillant sur plusieurs fonctionnalités différentes,
+soit les deux. Ainsi, on a plusieurs version indépendantes que l’on
+pourra fusionner plus tard.
 
-Par défaut une branche est créée lors de la création d’un dépôt qui s’appelle ~master~. Pour créer une nouvelle branche, on peut donc utiliser la commande git checkout -b nomdelanouvellebranche.
+Par défaut une branche est créée lors de la création d’un dépôt qui
+s’appelle ~master~. Pour créer une nouvelle branche, on peut donc
+utiliser la commande ~git checkout -b nomdelanouvellebranche~.
 #+BEGIN_SRC text
   $ git checkout -b nouvelle-branche
   Switched to a new branch 'nouvelle-branche'
 #+END_SRC
 
-À partir d’ici, toute modification apportée aux fichiers du dépôt n’affecteront que la branche courante, ~nouvelle-branche~ donc, et les fichiers de la branche ~master~ resteront inchangés. Si jamais tu veux retourner pour une quelconque raison sur la branche ~master~, il te suffira d’utiliser la commande ~git checkout master~.
+À partir d’ici, toute modification apportée aux fichiers du dépôt
+n’affecteront que la branche courante, ~nouvelle-branche~ donc, et les
+fichiers de la branche ~master~ resteront inchangés. Si jamais tu veux
+retourner pour une quelconque raison sur la branche ~master~, il te
+suffira d’utiliser la commande ~git checkout master~.
 
-Si tu souhaites avoir une liste des branches du dépôt, tu peux taper ~git branch --list~. La branche active sera marquée d’une étoile à côté de son nom.
+Si tu souhaites avoir une liste des branches du dépôt, tu peux taper
+~git branch --list~. La branche active sera marquée d’une étoile à côté
+de son nom.
 #+BEGIN_SRC text
   $ git branch --list
     master
@@ -891,20 +1245,38 @@ Tout va bien alors ! Tu vas simplement exécuter cette commande :
   $ git stash
 #+END_SRC
 
-Ça va déplacer toutes tes modifications que tu n’as pas encore commit dans le stash, qui est une sorte d’emplacement temporaire, en dehors des branches. Normalement, ça va réinitialiser tes fichiers tels qu’ils étaient lors du dernier commit. Maintenant, change la branche sur laquelle tu travailles, par exemple tu si tu es sur la branche ~kevin~, tu exécutes ceci :
+Ça va déplacer toutes tes modifications que tu n’as pas encore commit
+dans le stash, qui est une sorte d’emplacement temporaire, en dehors
+des branches. Normalement, ça va réinitialiser tes fichiers tels
+qu’ils étaient lors du dernier commit. Maintenant, change la branche
+sur laquelle tu travailles, par exemple tu si tu es sur la branche
+~kevin~, tu exécutes ceci :
 #+BEGIN_SRC text
   $ git checkout kevin
 #+END_SRC
 
-Tes modifications sont toujours dans ton stack, et pour les restaurer, tu n’as plus qu’à exécuter
+Tes modifications sont toujours dans ton stack, et pour les restaurer,
+tu n’as plus qu’à exécuter
 #+BEGIN_SRC text
   $ git stash pop
 #+END_SRC
 
-Et voilà, tu viens de déplacer tes modifications sur la bonne branche. Pour information, si tu as créé un nouveau fichier ou un nouveau dossier avec des fichiers, ils ne seront pas déplacés dans le stash, mais ils ne seront pas supprimés lors de la première commande. Tu auras juste à les commit sur ta nouvelle branche pour qu’ils cessent de se déplacer de branche en branche.
+Et voilà, tu viens de déplacer tes modifications sur la bonne branche.
+Pour information, si tu as créé un nouveau fichier ou un nouveau
+dossier avec des fichiers, ils ne seront pas déplacés dans le stash,
+mais ils ne seront pas supprimés lors de la première commande. Tu
+auras juste à les commit sur ta nouvelle branche pour qu’ils cessent
+de se déplacer de branche en branche.
 
 **** Du coup, Mathilde a bien avancé sur son code, et moi aussi, chacun sur notre branche. On fait comment maintenant ?
-Au bout d’un moment, tu vas sans doute vouloir fusionner deux branches, par exemple tu as finis de développer une nouvelle fonctionnalité sur la branche ~nouvelle-branche~ et tu souhaites l’ajouter à la version stable de ton code qui se situe sur ~master~. Dans ce cas, ce que tu peux faire, c’est retourner sur ta branche ~master~, puis tu vas effectuer ce qu’on appelle un merge ; en gros, pour faire simple, tu vas appliquer les modifications de la branche que tu souhaites fusionner avec ta branche ~master~ sur cette dernière.
+Au bout d’un moment, tu vas sans doute vouloir fusionner deux
+branches, par exemple tu as finis de développer une nouvelle
+fonctionnalité sur la branche ~nouvelle-branche~ et tu souhaites
+l’ajouter à la version stable de ton code qui se situe sur ~master~.
+Dans ce cas, ce que tu peux faire, c’est retourner sur ta branche
+~master~, puis tu vas effectuer ce qu’on appelle un merge ; en gros,
+pour faire simple, tu vas appliquer les modifications de la branche
+que tu souhaites fusionner avec ta branche ~master~ sur cette dernière.
 #+BEGIN_SRC text
   $ git checkout master
   Switched to branch 'master'
@@ -916,19 +1288,47 @@ Au bout d’un moment, tu vas sans doute vouloir fusionner deux branches, par ex
    create mode 100644 projet.txt
 #+END_SRC
 
-Rappelle-toi que la commande ~merge~ ramène les commits de la branche spécifiée vers ta branche active, et pas forcément vers le ~master~. Du coup, si tu est sur une branche ~mathilde~ et que tu effectues un ~git merge leon~, tu vas ramener tous les commits de leon vers la branche mathilde. Ça peut être intéressant à faire si jamais un bug a été corrigé dans une autre branche ou qu’une fonctionnalité a été ajoutée et que tu veux en bénéficier dans ta branche active. N’oublie juste pas de tout bien commit avant de faire ton merge.
+Rappelle-toi que la commande ~merge~ ramène les commits de la branche
+spécifiée vers ta branche active, et pas forcément vers le ~master~. Du
+coup, si tu est sur une branche ~mathilde~ et que tu effectues un ~git
+merge leon~, tu vas ramener tous les commits de leon vers la branche
+mathilde. Ça peut être intéressant à faire si jamais un bug a été
+corrigé dans une autre branche ou qu’une fonctionnalité a été ajoutée
+et que tu veux en bénéficier dans ta branche active. N’oublie juste
+pas de tout bien commit avant de faire ton merge.
 
 *** J’ai entendu parler de Github…
-Tu commences à me plaire Enzo ! Github est un site web sur lequel tu peux héberger des projets libres ou open-source (si tu ne connais pas la différence, voici un article pour t’aider à comprendre, et un autre pour la route). C’est en particulier orienté pour les projets gérés par git, ce qui tombe bien car c’est ce qu’on utilise. Cela a pour avantage de pouvoir aisément partager ton code et d’assurer qu’il est bien sauvegardé quelque part d’autre que ton disque dur (un ~rm -rf~ est si vite arrivé). Et surtout, ça peut te permettre de collaborer avec d’autres personnes sur le même projet sans te casser la tête.
+Tu commences à me plaire Enzo ! Github est un site web sur lequel tu
+peux héberger des projets libres ou open-source (si tu ne connais pas
+la différence, voici un article pour t’aider à comprendre, et un autre
+pour la route). C’est en particulier orienté pour les projets gérés
+par git, ce qui tombe bien car c’est ce qu’on utilise. Cela a pour
+avantage de pouvoir aisément partager ton code et d’assurer qu’il est
+bien sauvegardé quelque part d’autre que ton disque dur (un ~rm -rf~ est
+si vite arrivé). Et surtout, ça peut te permettre de collaborer avec
+d’autres personnes sur le même projet sans te casser la tête.
 
 #+begin_quote
 Git est à Github ce que le porn est à Pornhub.
 #+end_quote
 
-J’aimerais tout de même te mettre au courant que Github n’est largement pas le seul site de ce genre à exister. Le concurrent le plus célèbre de Github est [[https://about.gitlab.com/][Gitlab]], et personnellement j’utilise [[https://gitea.io/en-us/][Gitea]]. Ces deux derniers peuvent même être hébergés en instances personnelles, comme [[https://labs.phundrak.com/phundrak/langue-phundrak-com/commit/f8ec1936f839e9e95a6badf4480589f5bc9d00a0][ce que je fais avec Gitea]] (qui est beaucoup plus léger que Gitlab, mais avec quelques fonctionnalités en moins), et il existe encore [[https://labs.phundrak.com/phundrak/langue-phundrak-com/commit/f8ec1936f839e9e95a6badf4480589f5bc9d00a0][plein d’autres alternatives]], à toi de trouver les autres.
+J’aimerais tout de même te mettre au courant que Github n’est
+largement pas le seul site de ce genre à exister. Le concurrent le
+plus célèbre de Github est [[https://about.gitlab.com/][Gitlab]], et personnellement j’utilise [[https://gitea.io/en-us/][Gitea]].
+Ces deux derniers peuvent même être hébergés en instances
+personnelles, comme [[https://labs.phundrak.com/phundrak/langue-phundrak-com/commit/f8ec1936f839e9e95a6badf4480589f5bc9d00a0][ce que je fais avec Gitea]] (qui est beaucoup plus
+léger que Gitlab, mais avec quelques fonctionnalités en moins), et il
+existe encore [[https://labs.phundrak.com/phundrak/langue-phundrak-com/commit/f8ec1936f839e9e95a6badf4480589f5bc9d00a0][plein d’autres alternatives]], à toi de trouver les
+autres.
 
 *** J’ai téléchargé un projet en zip
-Ou bien, tu peux télécharger le projet directement via git. Eh oui ! git permet de gérer les dépôts dits distants, c’est à dire ceux qui sont hébergés sur un serveur en ligne, comme par exemple sur Github. Pour cela, il te faut te munir du lien vers le dépôt git, et le passer en argument de git clone. Par exemple, si tu veux télécharger de dépôt du petit logiciel de chat en réseau que j’ai codé durant ma L2 d’informatique, tu peux exécuter ceci :
+Ou bien, tu peux télécharger le projet directement via git. Eh oui !
+git permet de gérer les dépôts dits distants, c’est à dire ceux qui
+sont hébergés sur un serveur en ligne, comme par exemple sur Github.
+Pour cela, il te faut te munir du lien vers le dépôt git, et le passer
+en argument de git clone. Par exemple, si tu veux télécharger de dépôt
+du petit logiciel de chat en réseau que j’ai codé durant ma L2
+d’informatique, tu peux exécuter ceci :
 #+BEGIN_SRC text
   $ git clone https://github.com/noalien/GL4Dummies.git
   Cloning into 'GL4Dummies'...
@@ -940,22 +1340,38 @@ Ou bien, tu peux télécharger le projet directement via git. Eh oui ! git perm
   Resolving deltas: 100% (2019/2019), done.
 #+END_SRC
 
-Et c’est bon, tu as accès au répertoire ~GL4Dummies~ et au code source du projet. (Courage aux élèves de Paris 8 qui feront de la programmation graphique !)
+Et c’est bon, tu as accès au répertoire ~GL4Dummies~ et au code source
+du projet. (Courage aux élèves de Paris 8 qui feront de la
+programmation graphique !)
 
 *** Et si je veux créer mon propre dépôt sur Github
-Dans ce cas là, c’est simple Brigitte. Il faut que tu te créés un compte sur Github, puis tu cliques sur le bouton ~+~ et ~New Repository~. Tu lui donnes le nom que tu souhaites (en l’occurrence je le nomme ~temporary-repo~ car je vais le supprimer cinq minutes après l’écriture de ces lignes), et tu cliques sur ~Create Repository~. Tu n’ajoutes rien avant, pas de description, pas de ~.gitignore~, RIEN.
+Dans ce cas là, c’est simple Brigitte. Il faut que tu te créés un
+compte sur Github, puis tu cliques sur le bouton ~+~ et ~New Repository~.
+Tu lui donnes le nom que tu souhaites (en l’occurrence je le nomme
+~temporary-repo~ car je vais le supprimer cinq minutes après l’écriture
+de ces lignes), et tu cliques sur ~Create Repository~. Tu n’ajoutes rien
+avant, pas de description, pas de ~.gitignore~, RIEN.
 
-Et là, magie ! Github indique comment ajouter le dépôt distant à ton dépôt local.
+Et là, magie ! Github indique comment ajouter le dépôt distant à ton
+dépôt local.
 #+BEGIN_SRC text
   $ git remote add origin https://github.com/Phundrak/temporary-repo.git
 #+END_SRC
 
 Et voilà, ton dépôt est lié au dépôt distant. Oui, juste comme ça.
 
-Sinon, si tu souhaites d’abord créer ton dépôt sur Github puis sur ta machine, tu peux aussi très bien le créer sur Github (logique) puis le cloner sur ta machine comme je te l’ai montré avant.
+Sinon, si tu souhaites d’abord créer ton dépôt sur Github puis sur ta
+machine, tu peux aussi très bien le créer sur Github (logique) puis le
+cloner sur ta machine comme je te l’ai montré avant.
 
 *** Et du coup, comment je met tout ça en ligne ?
-Bon ok, ce n’est pas aussi simple que ça. Une fois que tu as lié ton dépôt au dépôt distant, il faudra que tu mettes en ligne tes commits quand tu en auras l’occasion. Pour ce faire, tu n’as qu’à taper ~git push~ ; et la première fois, il faudra que tu indiques à ton dépôt où mettre en ligne précisément dans le dépôt distant, auquel cas tu ajoutes ~-u origin master~ pour cette première fois. Git te demandera donc tes identifiants Github pour pouvoir mettre tout ça en ligne.
+Bon ok, ce n’est pas aussi simple que ça. Une fois que tu as lié ton
+dépôt au dépôt distant, il faudra que tu mettes en ligne tes commits
+quand tu en auras l’occasion. Pour ce faire, tu n’as qu’à taper ~git
+push~ ; et la première fois, il faudra que tu indiques à ton dépôt où
+mettre en ligne précisément dans le dépôt distant, auquel cas tu
+ajoutes ~-u origin master~ pour cette première fois. Git te demandera
+donc tes identifiants Github pour pouvoir mettre tout ça en ligne.
 #+BEGIN_SRC text
   $ git push -u origin master
   Username for 'https://github.com': phundrak
@@ -975,12 +1391,28 @@ Bon ok, ce n’est pas aussi simple que ça. Une fois que tu as lié ton dépôt
   Branch 'master' set up to track remote branch 'master' from 'origin'.
 #+END_SRC
 
-Bon, là en nom d’utilisateur il y a le mien, faudra remplacer avec le tiens. Et ouais, ma vitesse de mise en ligne n’est pas fameuse, je suis sur une connexion 3G+ à l’heure où j’écris ces lignes, ne me juge pas. Bref, toujours est-il que je viens de mettre en ligne les fichiers du dépôt sur Github. Pas la peine de chercher le mien sur Github par contre, ça fera un bail que je l’aurai supprimé au moment où tu liras ces lignes.
+Bon, là en nom d’utilisateur il y a le mien, faudra remplacer avec le
+tiens. Et ouais, ma vitesse de mise en ligne n’est pas fameuse, je
+suis sur une connexion 3G+ à l’heure où j’écris ces lignes, ne me juge
+pas. Bref, toujours est-il que je viens de mettre en ligne les
+fichiers du dépôt sur Github. Pas la peine de chercher le mien sur
+Github par contre, ça fera un bail que je l’aurai supprimé au moment
+où tu liras ces lignes.
 
-Pour info, tu peux éviter d’avoir à taper ton identifiant et ton mot de passe à chaque fois que tu fais un push sur ton dépôt si tu indiques à Github ta clef SSH. Tu auras plus d’informations là (c’est à peu près la même merde pour Gitlab, Gitea et Cie).
+Pour info, tu peux éviter d’avoir à taper ton identifiant et ton mot
+de passe à chaque fois que tu fais un push sur ton dépôt si tu
+indiques à Github ta clef SSH. Tu auras plus d’informations là (c’est
+à peu près la même merde pour Gitlab, Gitea et Cie).
 
 *** Quelqu’un a fait des modifications depuis mon dernier commit, je récupère ça comment ?
-Pour faire un exemple, je viens de créer un ~README.md~ sur Github directement. Ce type de fichiers est assez standard afin de présenter plus ou moins en détails le dépôt et le projet qui y est lié, et son contenu apparaîtra formaté sur la page du dépôt sur Github s’il est au format ~.md~ (Markdown) ou ~.org~ (org-mode, le Markdown d’Emacs avec lequel est écrit ce tutoriel, et qui est clairement supérieur à Markdown). Mais il n’est pas présent dans mon dépôt local, du coup je vais devoir le récupérer. On va donc entrer git pull.
+Pour faire un exemple, je viens de créer un ~README.md~ sur Github
+directement. Ce type de fichiers est assez standard afin de présenter
+plus ou moins en détails le dépôt et le projet qui y est lié, et son
+contenu apparaîtra formaté sur la page du dépôt sur Github s’il est au
+format ~.md~ (Markdown) ou ~.org~ (org-mode, le Markdown d’Emacs avec
+lequel est écrit ce tutoriel, et qui est clairement supérieur à
+Markdown). Mais il n’est pas présent dans mon dépôt local, du coup je
+vais devoir le récupérer. On va donc entrer git pull.
 #+BEGIN_SRC text
   $ git pull
   remote: Enumerating objects: 4, done.
@@ -998,25 +1430,76 @@ Pour faire un exemple, je viens de créer un ~README.md~ sur Github directement.
 #+END_SRC
 
 *** Je suis en train de travailler sur le même fichier que Ginette
-Là, c’est un problème qui aurait pu être évité avec l’usage des branches dont je t’avais parlé plus haut, mais visiblement, vous êtes sur la même branche. Pas bien. Dans ce cas-là, met-toi d’accord avec Ginette pour savoir qui fait ses push en premier. Si le choix tombe sur Ginette, ou si elle a imposé sa vision des choses et a fait son push avant toi, Github va râler car tu n’es pas à jour. Dans ce cas ne panique pas, si tu n’as pas fait tes commits, lance la commande ~git stash~ ; ça va sauvegarder tes modifications dans un coin à part et va annuler tes modifications.
+Là, c’est un problème qui aurait pu être évité avec l’usage des
+branches dont je t’avais parlé plus haut, mais visiblement, vous êtes
+sur la même branche. Pas bien. Dans ce cas-là, met-toi d’accord avec
+Ginette pour savoir qui fait ses push en premier. Si le choix tombe
+sur Ginette, ou si elle a imposé sa vision des choses et a fait son
+push avant toi, Github va râler car tu n’es pas à jour. Dans ce cas ne
+panique pas, si tu n’as pas fait tes commits, lance la commande ~git
+stash~ ; ça va sauvegarder tes modifications dans un coin à part et va
+annuler tes modifications.
 
 *** Github ne veut pas de mes pushs sur le dépôt de Gilberte, oskour !
-Du calme Jean-Célestin. Cela veut tout simplement dire que tu n’as tout simplement pas les droits d’écriture sur son dépôt. Du coup, soit tu peux lui demander directement à ce qu’elle te donne les droits d’écriture si elle a confiance en toi, soit tu peux créer un fork puis une pull-request sur Github depuis ton fork où tu auras fait tes modifications.
+Du calme Jean-Célestin. Cela veut tout simplement dire que tu n’as
+tout simplement pas les droits d’écriture sur son dépôt. Du coup, soit
+tu peux lui demander directement à ce qu’elle te donne les droits
+d’écriture si elle a confiance en toi, soit tu peux créer un fork puis
+une pull-request sur Github depuis ton fork où tu auras fait tes
+modifications.
 
 *** Fork ? Pull request ? Que font des fourchettes et des pulls dans ce tuto ?
-Ouhlà Billy, il va falloir remettre les choses au clair. Là il s’agit de quelque chose de spécifique à Github qu’à Git (d’où le fait qu’on en discute dans ce chapitre que le précédent).
+Ouhlà Billy, il va falloir remettre les choses au clair. Là il s’agit
+de quelque chose de spécifique à Github qu’à Git (d’où le fait qu’on
+en discute dans ce chapitre que le précédent).
 
-Sur Github, il est possible de copier vers ton profil le dépôt de quelqu’un d’autre dans l’état où il est au moment du fork. Cela inclus les fichiers du ~master~, mais également de toutes les branches du dépôt. Tu peux y penser en terme de super-branche dont tu deviens le propriétaire. Tu peux ainsi travailler comme bon te semble sur le code source sans que son propriétaire ne vienne t’engueuler car tu es en train de polluer sa base de code.
+Sur Github, il est possible de copier vers ton profil le dépôt de
+quelqu’un d’autre dans l’état où il est au moment du fork. Cela inclus
+les fichiers du ~master~, mais également de toutes les branches du
+dépôt. Tu peux y penser en terme de super-branche dont tu deviens le
+propriétaire. Tu peux ainsi travailler comme bon te semble sur le code
+source sans que son propriétaire ne vienne t’engueuler car tu es en
+train de polluer sa base de code.
 
-Si jamais il y a une modification dont tu es particulièrement fier, tu peux la soumettre au propriétaire du dépôt original (et à ses modérateurs et contributeurs s’il y en a) via ce qu’on appelle une pull-request. Cela signifie donc que tu demandes l’autorisation d’ajouter des commits à la base de code, et ces commits peuvent être lus et commentés par le propriétaire ou les modérateurs. Il peut y avoir une discussion entre toi et les autres personnes qui ont leur mot à dire, le code peut être temporairement refusé, auquel cas tu peux reproposer de nouveau commits sur la même pull-request jusqu’à ce que ton code soit définitivement accepté ou refusé. Dans tous les cas, cela mènera à la fermeture de ta pull-request, et tu pourras fièrement annoncer que tu as participé à un projet sur Github, ou bien avouer avec toute la honte du monde qu’il a été refusé.
+Si jamais il y a une modification dont tu es particulièrement fier, tu
+peux la soumettre au propriétaire du dépôt original (et à ses
+modérateurs et contributeurs s’il y en a) via ce qu’on appelle une
+pull-request. Cela signifie donc que tu demandes l’autorisation
+d’ajouter des commits à la base de code, et ces commits peuvent être
+lus et commentés par le propriétaire ou les modérateurs. Il peut y
+avoir une discussion entre toi et les autres personnes qui ont leur
+mot à dire, le code peut être temporairement refusé, auquel cas tu
+peux reproposer de nouveau commits sur la même pull-request jusqu’à ce
+que ton code soit définitivement accepté ou refusé. Dans tous les cas,
+cela mènera à la fermeture de ta pull-request, et tu pourras fièrement
+annoncer que tu as participé à un projet sur Github, ou bien avouer
+avec toute la honte du monde qu’il a été refusé.
 
 *** J’ai remarqué un bug ou une erreur, mais je ne peux pas corriger ça moi-même
-Eh bien dans ce cas-là, ouvre une /issue/ Bernadette ; /issue/ qui en français veut dire /problème/. Il s’agit d’un système de Github te permettant de signaler quelque chose aux propriétaires du dépôt, il peut s’agir d’un bug, d’une demande de fonctionnalité ou de proposition de modification d’autres fonctionnalités. Cela peut donner lieu à des discussions menant à la compréhension du bug, ou à une amélioration de ta proposition.
+Eh bien dans ce cas-là, ouvre une /issue/ Bernadette ; /issue/ qui en
+français veut dire /problème/. Il s’agit d’un système de Github te
+permettant de signaler quelque chose aux propriétaires du dépôt, il
+peut s’agir d’un bug, d’une demande de fonctionnalité ou de
+proposition de modification d’autres fonctionnalités. Cela peut donner
+lieu à des discussions menant à la compréhension du bug, ou à une
+amélioration de ta proposition.
 
-Si tu soumets un bug, avant d’ouvrir une nouvelle issue, assure-toi de bien savoir comment le bug se produit et peut se reproduire. Est-ce que le bug apparaît si tu utilise ou ouvre le logiciel d’une autre façon ? Est-ce que le bug apparaît ailleurs ? Est-tu sûr que le bug soit un bug ? Et si tu décides de le partager, assure-toi de partager un maximum d’information et tout ce que tu sais sur ce bug, en particulier les étapes et conditions pour le reproduire.
+Si tu soumets un bug, avant d’ouvrir une nouvelle issue, assure-toi de
+bien savoir comment le bug se produit et peut se reproduire. Est-ce
+que le bug apparaît si tu utilise ou ouvre le logiciel d’une autre
+façon ? Est-ce que le bug apparaît ailleurs ? Est-tu sûr que le bug
+soit un bug ? Et si tu décides de le partager, assure-toi de partager
+un maximum d’information et tout ce que tu sais sur ce bug, en
+particulier les étapes et conditions pour le reproduire.
 
 *** Les raccourcis et paramètres de Git
-Comme j’en avais parlé plus haut, il est possible de configurer git de façon un peu plus poussée que simplement déclarer notre nom et notre adresse e-mail dans notre =~/.gitconfig=. Il est par exemple possible de déclarer notre éditeur texte préféré, notre navigateur par défaut ou bien même des raccourcis qui pourront t’être bien utile. Ci dessous je te met une partie de mon fichier de configuration avec quelques-unes de mes préférences et pas mal de mes alias.
+Comme j’en avais parlé plus haut, il est possible de configurer git de
+façon un peu plus poussée que simplement déclarer notre nom et notre
+adresse e-mail dans notre =~/.gitconfig=. Il est par exemple possible de
+déclarer notre éditeur texte préféré, notre navigateur par défaut ou
+bien même des raccourcis qui pourront t’être bien utile. Ci dessous je
+te met une partie de mon fichier de configuration avec quelques-unes
+de mes préférences et pas mal de mes alias.
 #+BEGIN_SRC toml
   [core]
     editor = emacsclient -c
@@ -1045,28 +1528,57 @@ Comme j’en avais parlé plus haut, il est possible de configurer git de façon
     sw = stash show
 #+END_SRC
 
-- ~a~ :: Permet d’ajouter d’un coup tout nouveau fichier d’un dépôt en préparation au commit. On peut faire la même chose avec ~git add .~ si on est à la racine du dépôt.
-- ~c~ :: Un raccourci pour commit, ça permet d’éviter quelques frappes de clavier d’écrire ~git c~ plutôt que ~git commit~.
-- ~cm~ :: De même pour ~cm~ qui évite de devoir écrire ~commit -m~. On n’a plus qu’à écrire directement le message de commit après ~cm~.
-- ~cam~ :: Non, ce n’est pas un plan, c’est le même alias que ~cm~ mais qui en plus met automatiquement tous les fichiers modifiés ou supprimés, donc s’il n’y a pas de nouveau fichier à ajouter, même pas besoin de passer par un ~git a~ avant le ~git cam "j’aime les pâtes"~.
+- ~a~ :: Permet d’ajouter d’un coup tout nouveau fichier d’un dépôt en
+  préparation au commit. On peut faire la même chose avec ~git add .~ si
+  on est à la racine du dépôt.
+- ~c~ :: Un raccourci pour commit, ça permet d’éviter quelques frappes
+  de clavier d’écrire ~git c~ plutôt que ~git commit~.
+- ~cm~ :: De même pour ~cm~ qui évite de devoir écrire ~commit -m~. On n’a
+  plus qu’à écrire directement le message de commit après ~cm~.
+- ~cam~ :: Non, ce n’est pas un plan, c’est le même alias que ~cm~ mais
+  qui en plus met automatiquement tous les fichiers modifiés ou
+  supprimés, donc s’il n’y a pas de nouveau fichier à ajouter, même
+  pas besoin de passer par un ~git a~ avant le ~git cam "j’aime les
+  pâtes"~.
 - ~co~ :: Pour aller plus vite quand on veut écrire ~checkout~.
-- ~cob~ :: Et pour en plus rajouter le flag ~-b~ pour la création d’une nouvelle branche.
-- ~cl~ :: Pour quand tu voudras télécharger ce tutoriel en tapant ~git cl https://github.com/Phundrak/tutoriel-git.git~ plutôt que ~git clone https://github.com/Phundrak/tutoriel-git.git~.
-- ~l~ :: Te permet d’avoir le log un peu plus sympa et compact dont j’avais parlé plus haut.
+- ~cob~ :: Et pour en plus rajouter le flag ~-b~ pour la création d’une
+  nouvelle branche.
+- ~cl~ :: Pour quand tu voudras télécharger ce tutoriel en tapant ~git cl
+  https://github.com/Phundrak/tutoriel-git.git~ plutôt que ~git clone
+  https://github.com/Phundrak/tutoriel-git.git~.
+- ~l~ :: Te permet d’avoir le log un peu plus sympa et compact dont
+  j’avais parlé plus haut.
 - ~ps~ :: Pour faire un push plus rapidement.
-- ~pl~ :: Et pour télécharger les derniers commits sur le dépôt plus rapidement.
+- ~pl~ :: Et pour télécharger les derniers commits sur le dépôt plus
+  rapidement.
 - ~re~ :: Pour réinitialiser plus rapidement.
-- ~s~ :: Pour rapidement savoir où tu en es dans ton dépôt, savoir ce qui a été modifié, ajouté, supprimé, déplacé, tout ça…
-- ~staged~ :: Eh oui, Git n’a pas de fonction dédiée pour lister les fichiers en staging, du coup la voilà.
-- ~st~ :: Pour sauvegarder tes modifications sur le stash plus rapidement.
+- ~s~ :: Pour rapidement savoir où tu en es dans ton dépôt, savoir ce
+  qui a été modifié, ajouté, supprimé, déplacé, tout ça…
+- ~staged~ :: Eh oui, Git n’a pas de fonction dédiée pour lister les
+  fichiers en staging, du coup la voilà.
+- ~st~ :: Pour sauvegarder tes modifications sur le stash plus
+  rapidement.
 - ~sc~ :: Pour supprimer ton stash plus rapidement.
-- ~sp~ :: Pour rétablir le stash sur la branche courante plus rapidement.
+- ~sp~ :: Pour rétablir le stash sur la branche courante plus
+  rapidement.
 - ~sw~ :: Pour rapidement savoir ce qu’il y a sur le stash.
 
 *** Et c’est tout ?
-C’est déjà pas mal ! Mais non, ce n’est certainement pas tout. Cependant, ce tutoriel n’a pour but de t’apprendre que les bases de Git et de Github, pas de tout t’apprendre ! Si tu souhaites aller plus loin, connaître plus de commandes (comme ~git blame~ ou ~git reset~), ou bien connaître plus d’options, je ne peux que t’inviter à aller te documenter par toi-même sur le site de Git qui se trouve ici, ou bien à consulter des pages de manuel dans ton terminal via ~man git~, ~man git-apply~ ou ~man git-cherry-pick~ (oui, il faut lier ~git~ et le nom de la commande par un tiret d’union).
+C’est déjà pas mal ! Mais non, ce n’est certainement pas tout.
+Cependant, ce tutoriel n’a pour but de t’apprendre que les bases de
+Git et de Github, pas de tout t’apprendre ! Si tu souhaites aller plus
+loin, connaître plus de commandes (comme ~git blame~ ou ~git reset~), ou
+bien connaître plus d’options, je ne peux que t’inviter à aller te
+documenter par toi-même sur le site de Git qui se trouve ici, ou bien
+à consulter des pages de manuel dans ton terminal via ~man git~, ~man
+git-apply~ ou ~man git-cherry-pick~ (oui, il faut lier ~git~ et le nom de
+la commande par un tiret d’union).
 
-Si jamais tu as une question, n’hésite pas à m’envoyer un mail à [[mailto:lucien@phundrak.com][lucien@phundrak.com]]. Si jamais tu trouves une erreur dans ce que je viens de dire dans ce tutoriel, ou si tu as une suggestion, c’est justement le moment de mettre en pratique ce que tu as lu un peu plus haut et d’ouvrir une issue sur Github sur le [[https://github.com/Phundrak/tutoriel-git][dépôt de ce tutoriel]].
+Si jamais tu as une question, n’hésite pas à m’envoyer un mail à
+[[mailto:lucien@phundrak.com][lucien@phundrak.com]]. Si jamais tu trouves une erreur dans ce que je
+viens de dire dans ce tutoriel, ou si tu as une suggestion, c’est
+justement le moment de mettre en pratique ce que tu as lu un peu plus
+haut et d’ouvrir une issue sur Github sur le [[https://github.com/Phundrak/tutoriel-git][dépôt de ce tutoriel]].
 
 #+begin_html
 <script defer src="https://commento.phundrak.com/js/commento.js"></script>
