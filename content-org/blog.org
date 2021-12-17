@@ -4,6 +4,75 @@
 #+hugo_section: ./
 #+hugo_categories: emacs linux conlanging orgmode
 
+* [EN] Open-Sourcing ALYS                                              :ALYS:
+:PROPERTIES:
+:EXPORT_FILE_NAME: open-sourcing-alys
+:EXPORT_DATE: 2021-12-15
+:export_hugo_menu: :menu "main"
+:END:
+#+TOC: headlines 1 local
+
+** Too Long, Didn’t Read
+VoxWave no longer exists as a company, ALYS lives on as an open-source
+project under the GPL-3.0 and the BY-CC-4.0 license. You can find it
+at the following address:
+
++[[https://labs.phundrak.com/phundrak/ALYS]]+
+
+EDIT: The main repository moved to [[https://labs.phundrak.com/ALYS/ALYS]]
+and vocal libraries are now separated in different repositories linked
+from the main one.
+
+** What happened?
+You might have noticed it, but VoxWave became quite silent over the
+last months. This is because we at the head of VoxWave chose to close
+the company, a decision which came in effect in early September 2021.
+There’s not much else to say.
+
+*However*, the good news is the rest still goes on! ALYS as a project is
+still alive and well! As her creator, I decided to step in and
+continue its technical support. Since the company no longer exists,
+and as a free and open-source software supporter, I also decided to
+open-source ALYS as much as possible. As a result:
+
+#+begin_center
+ALYS for Alter/Ego is now free software as in /free beer/.
+
+ALYS for UTAU, including its previously unreleased UTAU prototype, is
+now free as in /free beer/ and in /freedom/.
+#+end_center
+
+You can find the installer of ALYS for Alter/Ego on the repository
+linked above as well as a free license file. Regarding its UTAU
+version, its prototype is already configured with ~oto.ini~ files, but
+the source file for its Alter/Ego version are stripped of any
+configuration.
+
+** What’s New?
+Therefore, ALYS is now available under three different licences:
+- The character is now under the free [[https://creativecommons.org/licenses/by-nc/4.0/][CC-BY-NC-4.0 license]]
+- The UTAU vocal libraries are now under the [[https://www.gnu.org/licenses/gpl-3.0.en.html][GPL-3.0license ]] ([[https://choosealicense.com/licenses/gpl-3.0/][short
+  readable version]])
+- The Alter/Ego is still under a proprietary license under my name but
+  it is now available free of charge
+
+Basically, this means you can do whatever you wish with the character
+as long as it is non-commercial and you credit [[https://www.instagram.com/hsaphirya/][Saphirya]], ALYS’
+designer. The UTAU vocal libraries can be used, modified, and
+redistributed as much as you wish as long as it stays under the
+GPL-3.0 license. And you are free to use the Alter/Ego vocal libraries
+as much as you wish, but you cannot redistribute or modify them.
+
+I also decided to release ALYS’ very first, secret, unreleased,
+unheard French vocal library. It was scrapped no long after recording
+it due to quality issues and was replaced by its French UTAU prototype
+people could hear through ALYS’ first songs. It is released more as a
+way of preserving the fact it existed rather preserving a usable vocal
+library. (I don’t even remember what it sounds like.)
+
+if you have any question, you are free to send me an email at
+[[mailto:lucien@phundrak.com][lucien@phundrak.com]] or open an issue on the repository mentioned
+above.
 * Conlanging                                                       :@conlang:
 ** TODO Writing my conlanging docs with Emacs              :emacs:conlanging:
 * Development                                                          :@dev:
