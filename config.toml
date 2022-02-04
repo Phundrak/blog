@@ -36,7 +36,7 @@ enableEmoji = true
 
   [[params.social]]
     name = "twitter"
-    url = "https://github.com/phundrak"
+    url = "https://twitter.com/phundrak"
 
   [[params.social]]
     name = "youtube"
