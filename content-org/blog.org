@@ -1654,3 +1654,116 @@ haut et d’ouvrir une issue sur Github sur le [[https://github.com/Phundrak/tut
 <script defer src="https://commento.phundrak.com/js/commento.js"></script>
 <div id="commento"></div>
 #+end_html
+
+** [EN] My YouTube subscriptions as an RSS feed         :linux:dev:tutorial:
+:PROPERTIES:
+:EXPORT_FILE_NAME: youtube-subscriptions-rss
+:EXPORT_DATE: 2022-02-04
+:export_hugo_menu: :menu "main"
+:END:
+*** The Problem
+I’m sure you’ve been in the same situation before: you go on YouTube
+because you want to watch a video, maybe two, from your subscriptions.
+You open the first one. Oh great, an unskippable fifteen seconds ad.
+And another one! OK, the video starts. It gets cut a couple of times
+by other ads of varying length. Oh but what’s this? This recommended
+video looks nice! And before you know it, your whole afternoon and
+evening went by painfully watching videos on YouTube’s atrocious video
+player. You lost focus.
+
+*** My Solution: mpv + RSS
+Wouldn’t it be nice if it were possible to watch these videos with a
+full fledged video player over which you have complete control? Which
+could be customized to your heart’s content? Which won’t secretly
+track what you watch?
+
+Oh right, [[https://mpv.io/][mpv]]! It supports most video formats you can think of, and
+thanks to its interoperability with [[https://github.com/ytdl-org/youtube-dl][youtube-dl]], you can also watch
+videos from [[https://ytdl-org.github.io/youtube-dl/supportedsites.html][an extremely wide variety of websites]]! So why not YouTube?
+
+Now, the question is how to get rid of YouTube’s interface. The answer
+is actually quite simple: let’s use an RSS feed. With the RSS feeds
+from YouTube, you will receive in your RSS reader the link of the
+video with its thumbnail and its description. You can then copy from
+there the link and open it with mpv with a command like this:
+#+begin_src bash
+mpv "https://www.youtube.com/watch?v=xym2R6_Qd7c"
+#+end_src
+
+**** Channel RSS
+Now the question is how to get the RSS feed of a channel? The answer
+is quite simple. The base URL for a YouTube channel RSS feed is
+~https://www.youtube.com/feeds/videos.xml?channel_id=~ to which you
+simply have to add the channel ID. For instance, if you want to follow
+Tom Scott with this, you simply have to extract the part of the
+channel after ~/channel/~ in his URL and append it to the URL mentioned
+above, and TADAH! you get an RSS feed to his channel!
+#+begin_src text
+https://www.youtube.com/feeds/videos.xml?channel_id=UCBa659QWEk1AI4Tg--mrJ2A
+#+end_src
+
+Be careful to select the channel ID only if it is after a ~/channel/~
+though! The part that is after a ~/c/~ will not work. If you end up on
+the URL ~https://www.youtube.com/c/TomScottGo~, simply click on a random
+video, then click on the channel’s name. This should bring you back to
+the channel but with an important difference: the URL is now
+~https://www.youtube.com/channel/UCBa659QWEk1AI4Tg--mrJ2A~.
+
+The thing that is really nice with this setup is you don’t really need
+to actually subscribe to a channel, your RSS feed already does that
+for you! And with lots of RSS feed readers, you can categorize your
+different feeds, meaning you can even categorize your subscriptions!
+
+**** Playlist RSS
+It is also possible to follow not only a channel but a playlist of
+videos. For that, you will instead use
+~https://www.youtube.com/feeds/videos.xml?playlist_id=~ as your base URL
+to which you will add the ID of the playlist you want to follow. For
+instance, with Tom Scott’s playlist for Citation Needed Season 7, the
+URL of the playlist is
+~https://www.youtube.com/playlist?list=PL96C35uN7xGI15-QbtUD-wJ5-G8oBI-tG~,
+which means you need to keep the ~PL96C35uN7xGI15-QbtUD-wJ5-G8oBI-tG~
+and put it into the URL like so:
+#+begin_src text
+https://www.youtube.com/feeds/videos.xml?playlist_id=PL96C35uN7xGI15-QbtUD-wJ5-G8oBI-tG
+#+end_src
+
+*** Which RSS reader to go with?
+If you know me, you’ll know I am extremely biaised towards Emacs, so
+of course I’ll recommend Elfeed to any Emacs user ([[https://config.phundrak.com/emacs#Packages-Configuration-Applications-Elfeedoip0fl6184j0][my relevant
+configuration is here]]). I even wrote an advice around
+~elfeed-show-visit~ to ensure YouTube videos are open with mpv instead
+of my web browser.
+
+If you’re not into Emacs, or not /that/ into Emacs, you can also try
+other alternatives such as [[https://gitlab.com/news-flash/news_flash_gtk][NewsFlash]], a very nice RSS reader written
+in GTK for Linux –I may not always agree with DistroTube, but he made
+a [[https://www.youtube.com/watch?v=KBAmviddh4A][very nice video]] presenting this piece of software. (Remember,
+right-click and then ~mpv "the url here"~!)
+
+The [[https://apps.nextcloud.com/apps/news][News app]] for Nextcloud is also very neat, I recommend you using it.
+
+You can also get your RSS feed in your terminal with [[https://newsboat.org/][Newsboat]]. Not
+really my cup of tea, but I can see why some people enjoy it.
+
+*** Improving a bit the mpv tooling
+You might have heard it, but youtube-dl hasn’t been doing great
+recently. The tool is becoming slow and it lacks quite a few features
+it could really benefit from. While it is important to acknowledge its
+historical importance, I think it is now time to move on, and its
+successor shall be [[https://github.com/yt-dlp/yt-dlp][yt-dlp]]. In my experience, this youtube-dl fork is
+much faster than youtube-dl itself on top of providing additional
+features such as [[https://github.com/yt-dlp/yt-dlp#sponsorblock-options][SponsorBlock integration]].
+
+How do you replace youtube-dl with yt-dlp then? If you use ArchLinux
+or one of its derivates (I hope not Manjaro though), you can simply
+install ~yt-dlp-drop-in~ from the AUR.
+#+begin_src bash
+paru -S yt-dlp-drop-in
+# or if you prefer yay
+yay -S yt-dlp-drop-in
+# or whichever AUR helper you prefer, as long as it is NOT yaourt
+#+end_src
+
+If you are not an ArchLinux user, check out [[https://www.funkyspacemonkey.com/replace-youtube-dl-with-yt-dlp-how-to-make-mpv-work-with-yt-dlp][this article]], it will help
+you.
