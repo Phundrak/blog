@@ -122,9 +122,9 @@ Before defining the vector, there are a few things I want to define.
 First, there is an attribute I will often use with my functions:
 #+NAME: vector-nonnull-h
 #+BEGIN_SRC c
-  #indef NONNULL
-  # define NONNULL __attribute__((nonnull))
-  #endif
+#indef NONNULL
+# define NONNULL __attribute__((nonnull))
+#endif
 #+END_SRC
 This will forbid passing to functions marked with this attribute ~NULL~
 pointers, because we will use a lot of them.
@@ -135,8 +135,8 @@ We will also need to include some headers:
 - ~string.h~ :: for some memory operations such as ~memcpy~
 #+NAME: vector-includes-c
 #+BEGIN_SRC c
-  #include <assert.h>
-  #include <string.h>
+#include <assert.h>
+#include <string.h>
 #+END_SRC
 
 We also need to define a type that will be used as the destructor
@@ -145,7 +145,7 @@ that accept a void pointer to an element and return nothing, hence
 this definition:
 #+NAME: vector-destructor-type-h
 #+BEGIN_SRC c
-  typedef void (*Destructor)(void *element);
+typedef void (*Destructor)(void *element);
 #+END_SRC
 
 Now, onto the structure itself.
@@ -159,13 +159,13 @@ With our vector, we will need to keep track a couple of things:
 With this, we can describe our structure for the vector:
 #+NAME: vector-struct-def
 #+BEGIN_SRC c
-  struct Vector_s {
-    size_t     capacity;
-    size_t     length;
-    void **    elements;
-    Destructor destructor;
-  };
-  typedef struct Vector_s Vector;
+struct Vector_s {
+  size_t     capacity;
+  size_t     length;
+  void **    elements;
+  Destructor destructor;
+};
+typedef struct Vector_s Vector;
 #+END_SRC
 
 We have now four elements:
@@ -189,7 +189,7 @@ The first function for building vectors is ~vec_new()~. Here is its
 definition:
 #+NAME: vector-vec_new-h
 #+BEGIN_SRC c
-  Vector *vec_new(Destructor const destructor);
+Vector *vec_new(Destructor const destructor);
 #+END_SRC
 
 It is quite straightforward: when creating a new, standard vector,
@@ -200,18 +200,18 @@ yourself a pointer to the newly created vector with which you can now
 store elements. Let’s see how it works under the hood:
 #+NAME: vector-vec_new-c
 #+BEGIN_SRC c
-  Vector *vec_new(Destructor const destructor)
-  {
-    Vector *self;
-    self = (Vector *)malloc(sizeof(Vector));
-    assert(self);
-    ,*self = (Vector){.length   = 0,
-                     .capacity = VEC_INITIAL_CAPACITY,
-                     .elements = (void *)malloc(sizeof(void *) * VEC_INITIAL_CAPACITY),
-                     .destroy  = destructor};
-    assert(self->elements);
-    return self;
-  }
+Vector *vec_new(Destructor const destructor)
+{
+  Vector *self;
+  self = (Vector *)malloc(sizeof(Vector));
+  assert(self);
+  ,*self = (Vector){.length   = 0,
+                   .capacity = VEC_INITIAL_CAPACITY,
+                   .elements = (void *)malloc(sizeof(void *) * VEC_INITIAL_CAPACITY),
+                   .destroy  = destructor};
+  assert(self->elements);
+  return self;
+}
 #+END_SRC
 
 A new pointer is created, which will be the pointer returned to the
@@ -233,23 +233,23 @@ of reallocations when adding new elements. Its definition is the
 following:
 #+NAME: vector-vec_with_capacity-h
 #+BEGIN_SRC c
-  Vector *vec_with_capacity(Destructor const destructor, size_t const capacity);
+Vector *vec_with_capacity(Destructor const destructor, size_t const capacity);
 #+END_SRC
 
 Under the hood, it calls ~vec_new~, then it will reallocate the memory
 already allocated for the member ~elemements~.
 #+NAME: vector-vec_with_capacity-c
 #+BEGIN_SRC c
-  Vector *vec_with_capacity(Destructor const t_destructor,
-                            size_t const     t_capacity)
-  {
-    Vector *self = vec_new(t_destructor);
-    free(self->elements);
-    (*self).elements = (void *)malloc(sizeof(void *) * t_capacity);
-    assert(self->elements);
-    (*self).capacity = t_capacity;
-    return self;
-  }
+Vector *vec_with_capacity(Destructor const t_destructor,
+                          size_t const     t_capacity)
+{
+  Vector *self = vec_new(t_destructor);
+  free(self->elements);
+  (*self).elements = (void *)malloc(sizeof(void *) * t_capacity);
+  assert(self->elements);
+  (*self).capacity = t_capacity;
+  return self;
+}
 #+END_SRC
 
 *** Adding Data
@@ -291,7 +291,7 @@ vector. First, let’s declare a static function that reallocates the
 memory of a vector. Here is its declaration:
 #+NAME: vector-vec_realloc-def-c
 #+BEGIN_SRC c
-  static void vec_realloc(Vector *const self) NONNULL;
+static void vec_realloc(Vector *const self) NONNULL;
 #+END_SRC
 
 Its implementation is rather simple: double its capacity, and
@@ -300,20 +300,20 @@ assertion on whether the arrays has been correctly reallocated to
 ensure memory safety.
 #+NAME: vector-vec_realloc-c
 #+BEGIN_SRC c
-  void vec_realloc(Vector *const self)
-  {
-    self->capacity *= 2;
-    self->elements = realloc(self->elements, sizeof(void *) * vec_capacity(self));
-    assert(self->elements);
-    return;
-  }
+void vec_realloc(Vector *const self)
+{
+  self->capacity *= 2;
+  self->elements = realloc(self->elements, sizeof(void *) * vec_capacity(self));
+  assert(self->elements);
+  return;
+}
 #+END_SRC
 
 Now, we can proceed to element insertion. Here is the definition of
 ~vec_push~, which adds a new element at the end of the vector:
 #+NAME: vector-vec_push-h
 #+BEGIN_SRC c
-  void   *vec_push(Vector *const self, void *const element) NONNULL;
+void   *vec_push(Vector *const self, void *const element) NONNULL;
 #+END_SRC
 
 As you can see, it takes as its arguments a pointer to the vector (the
@@ -325,14 +325,14 @@ made to ~vec_realloc~ described above. Once the function is done, it
 will return a pointer to the newly inserted element.
 #+NAME: vector-vec_push-c
 #+BEGIN_SRC c
-  void *vec_push(Vector *const self, void *const t_element)
-  {
-    if (vec_length(self) >= vec_capacity(self)) {
-      vec_realloc(self);
-    }
-    self->elements[(*self).length++] = t_element;
-    return vec_last(self);
+void *vec_push(Vector *const self, void *const t_element)
+{
+  if (vec_length(self) >= vec_capacity(self)) {
+    vec_realloc(self);
   }
+  self->elements[(*self).length++] = t_element;
+  return vec_last(self);
+}
 #+END_SRC
 
 And this is it! There may be a function added later that will allow
@@ -348,8 +348,8 @@ a bit more performant but without the safety of the former. Let’s see
 the definition of both:
 #+NAME: vector-vec_at-h
 #+BEGIN_SRC c
-  void   *vec_safe_at(Vector const *const self, size_t const index) NONNULL;
-  void   *vec_at(Vector const *const self, size_t const index) NONNULL;
+void   *vec_safe_at(Vector const *const self, size_t const index) NONNULL;
+void   *vec_at(Vector const *const self, size_t const index) NONNULL;
 #+END_SRC
 
 Both have the same arguments: the former is a pointer to the vector we
@@ -358,10 +358,10 @@ retrieve our data. To see the difference in how both work, let’s first
 see the definition of ~vec_at~:
 #+NAME: vector-vec_at-c
 #+BEGIN_SRC c
-  void *vec_at(Vector const *const self, size_t const index)
-  {
-    return self->elements[index];
-  }
+void *vec_at(Vector const *const self, size_t const index)
+{
+  return self->elements[index];
+}
 #+END_SRC
 
 ~vec_at~ is really straightforward and is just syntax sugar around the
@@ -370,10 +370,10 @@ brackets in standard C. However, ~vec_safe_at~ performs some additional
 checks as you can see below:
 #+NAME: vector-vec_safe_at-c
 #+BEGIN_SRC c
-  void *vec_safe_at(Vector const *const self, size_t const t_index)
-  {
-    return (t_index >= vec_length(self)) ? NULL : vec_at(self, t_index);
-  }
+void *vec_safe_at(Vector const *const self, size_t const t_index)
+{
+  return (t_index >= vec_length(self)) ? NULL : vec_at(self, t_index);
+}
 #+END_SRC
 
 If the requested index is larger than the furthest index possible, a
@@ -387,16 +387,16 @@ It is also possible to retrieve directly the last element with
 ~vec_last~. Here is its definition:
 #+NAME: vector-vec_last-h
 #+BEGIN_SRC c
-  void   *vec_last(Vector const *const self) NONNULL;
+void   *vec_last(Vector const *const self) NONNULL;
 #+END_SRC
 
 Just as the previous functions, its declaration is really straightforward:
 #+NAME: vector-vec_last-c
 #+BEGIN_SRC c
-  void *vec_last(Vector const *const self)
-  {
-    return vec_at(self, vec_length(self) - 1);
-  }
+void *vec_last(Vector const *const self)
+{
+  return vec_at(self, vec_length(self) - 1);
+}
 #+END_SRC
 
 For the sake of the Object Oriented Programming paradigm, two
@@ -404,23 +404,23 @@ functions were also declared in order to retrieve some data that could
 otherwise be easily accessible:
 #+NAME: vector-vec_length_capacity-h
 #+BEGIN_SRC c
-  size_t  vec_length(Vector const *const self) NONNULL;
-  size_t  vec_capacity(Vector const *const self) NONNULL;
+size_t  vec_length(Vector const *const self) NONNULL;
+size_t  vec_capacity(Vector const *const self) NONNULL;
 #+END_SRC
 
 Their implementation is extremely trivial and doesn’t really need any
 explanation.
 #+NAME: vector-vec_length_capacity-c
 #+BEGIN_SRC c
-  size_t vec_length(Vector const *const self)
-  {
-    return self->length;
-  }
+size_t vec_length(Vector const *const self)
+{
+  return self->length;
+}
 
-  size_t vec_capacity(Vector const *const self)
-  {
-    return self->capacity;
-  }
+size_t vec_capacity(Vector const *const self)
+{
+  return self->capacity;
+}
 #+END_SRC
 
 *** Deleting Data
@@ -431,7 +431,7 @@ so that the member ~elements~ is exactly large enough to store all of
 our data with no more space than that. Here is its definition:
 #+NAME: vector-shrink_to_fit-h
 #+BEGIN_SRC c
-  void    vec_shrink_to_fit(Vector *const self) NONNULL;
+void    vec_shrink_to_fit(Vector *const self) NONNULL;
 #+END_SRC
 
 There’s nothing too exciting about its implementation: a simple
@@ -440,16 +440,16 @@ stored times the size of a void pointer, and we verify with an ~assert~
 if it has been correctly reallocated. Nothing is returned.
 #+NAME: vector-shrink_to_fit-c
 #+BEGIN_SRC c
-  void vec_shrink_to_fit(Vector *const self)
-  {
-    if (self->length <= 0) {
-      return;
-    }
-    self->capacity = self->length;
-    self->elements = realloc(self->elements, sizeof(void *) * vec_capacity(self));
-    assert(self->elements);
+void vec_shrink_to_fit(Vector *const self)
+{
+  if (self->length <= 0) {
     return;
   }
+  self->capacity = self->length;
+  self->elements = realloc(self->elements, sizeof(void *) * vec_capacity(self));
+  assert(self->elements);
+  return;
+}
 #+END_SRC
 
 Notice that a check is done to see if the vector exists, because
@@ -462,8 +462,8 @@ on the former, which can delete an element at any valid position.
 Here is their definition:
 #+NAME: vector-vec_pop-h
 #+BEGIN_SRC c
-  void    vec_pop_at(Vector *const self, size_t const index) NONNULL;
-  void    vec_pop(Vector *const self) NONNULL;
+void    vec_pop_at(Vector *const self, size_t const index) NONNULL;
+void    vec_pop(Vector *const self) NONNULL;
 #+END_SRC
 
 In order to insure memory safety, a static function is declared in
@@ -472,8 +472,8 @@ provided to the vector when it has been built. Its definition is the
 following:
 #+NAME: vector-vec_maybe_delete_element-def-c
 #+BEGIN_SRC c
-  static void vec_maybe_delete_element(Vector const *self,
-                                       size_t const  t_index) NONNULL;
+static void vec_maybe_delete_element(Vector const *self,
+                                     size_t const  t_index) NONNULL;
 #+END_SRC
 
 Its implementation is quite simple: if a destructor exists, then the
@@ -485,32 +485,32 @@ it before popping it, they need to retrieve it with something like
 ~vec_at~ and store it elsewhere.
 #+NAME: vector-vec_maybe_delete_element-c
 #+BEGIN_SRC c
-  void vec_maybe_delete_element(Vector const *self, size_t const t_index)
-  {
-    void *element = vec_at(self, t_index);
-    if (self->destroy) {
-      self->destroy(element);
-    }
-    free(element);
+void vec_maybe_delete_element(Vector const *self, size_t const t_index)
+{
+  void *element = vec_at(self, t_index);
+  if (self->destroy) {
+    self->destroy(element);
   }
+  free(element);
+}
 #+END_SRC
 
 Now that we have this function sorted out, we can implement our pops.
 Here is the implementation of ~vec_pop_at~:
 #+NAME: vector-vec_pop_at-c
 #+BEGIN_SRC c
-  void vec_pop_at(Vector *const t_self, size_t const t_index)
-  {
-    if (vec_safe_at(t_self, t_index) == NULL) {
-      return;
-    }
-    vec_maybe_delete_element(t_self, t_index);
-    if (t_index + 1 < vec_length(t_self)) {
-      memcpy(vec_at(t_self, t_index), vec_at(t_self, t_index + 1),
-             sizeof(void *) * (t_self->length - (t_index + 1)));
-    }
-    --(*t_self).length;
+void vec_pop_at(Vector *const t_self, size_t const t_index)
+{
+  if (vec_safe_at(t_self, t_index) == NULL) {
+    return;
   }
+  vec_maybe_delete_element(t_self, t_index);
+  if (t_index + 1 < vec_length(t_self)) {
+    memcpy(vec_at(t_self, t_index), vec_at(t_self, t_index + 1),
+           sizeof(void *) * (t_self->length - (t_index + 1)));
+  }
+  --(*t_self).length;
+}
 #+END_SRC
 
 A check is performed at the beninning of the function: that the
@@ -529,10 +529,10 @@ we want to delete the last element of the array. We can see how it
 relies on ~vec_pop_at~ in its implementation:
 #+NAME: vector-vec_pop-c
 #+BEGIN_SRC c
-  void vec_pop(Vector *const self)
-  {
-    vec_pop_at(self, vec_length(self));
-  }
+void vec_pop(Vector *const self)
+{
+  vec_pop_at(self, vec_length(self));
+}
 #+END_SRC
 
 Finally, ~vec_delete~ allows for the complete destruction and
@@ -540,7 +540,7 @@ deallocation of a vector, including all of its elements. Here is its
 definition:
 #+NAME: vector-vec_delete-h
 #+BEGIN_SRC c
-  void    vec_delete(Vector *const self) NONNULL;
+void    vec_delete(Vector *const self) NONNULL;
 #+END_SRC
 
 In its implementation, we can see three distinct steps:
@@ -549,78 +549,78 @@ In its implementation, we can see three distinct steps:
 - The deletion of the vector itself.
 #+NAME: vector-vec_delete-c
 #+BEGIN_SRC c
-  void vec_delete(Vector *const self)
-  {
-    if (self->destroy) {
-      for (size_t i = 0; i < vec_length(self); ++i) {
-        self->destroy(self->elements[i]);
-      }
+void vec_delete(Vector *const self)
+{
+  if (self->destroy) {
+    for (size_t i = 0; i < vec_length(self); ++i) {
+      self->destroy(self->elements[i]);
     }
-    free(self->elements);
-    free(self);
   }
+  free(self->elements);
+  free(self);
+}
 #+END_SRC
 
 *** The Final Source Code
 Finally, we can see the whole source code. Here is the header for the
 library: ~vector.h~
 #+BEGIN_SRC c :noweb yes
-  #ifndef VECTOR_H_
-  #define VECTOR_H_
+#ifndef VECTOR_H_
+#define VECTOR_H_
 
-  <<vector-nonnull-h>>
+<<vector-nonnull-h>>
 
-  <<vector-struct-def>>
+<<vector-struct-def>>
 
-  <<vector-vec_new-h>>
-  <<vector-vec_with_capacity-h>>
-  <<vector-vec_push-h>>
-  <<vector-vec_at-h>>
-  <<vector-vec_last-h>>
-  <<vector-vec_length_capacity-h>>
-  <<vector-shrink_to_fit-h>>
-  <<vector-vec_pop-h>>
-  <<vector-vec_delete-h>>
+<<vector-vec_new-h>>
+<<vector-vec_with_capacity-h>>
+<<vector-vec_push-h>>
+<<vector-vec_at-h>>
+<<vector-vec_last-h>>
+<<vector-vec_length_capacity-h>>
+<<vector-shrink_to_fit-h>>
+<<vector-vec_pop-h>>
+<<vector-vec_delete-h>>
 
-  #endif /* VECTOR_H_ */
+#endif /* VECTOR_H_ */
 #+END_SRC
 
 And here is the implementation file: ~vector.c~
 #+BEGIN_SRC c :noweb yes
-  #include "vector.h"
+#include "vector.h"
 
-  <<vector-includes-c>>
+<<vector-includes-c>>
 
-  <<vector-vec_realloc-def-c>>
-  <<vector-vec_maybe_delete_element-def-c>>
+<<vector-vec_realloc-def-c>>
+<<vector-vec_maybe_delete_element-def-c>>
 
-  <<vector-vec_new-c>>
+<<vector-vec_new-c>>
 
-  <<vector-vec_with_capacity-c>>
+<<vector-vec_with_capacity-c>>
 
-  <<vector-vec_realloc-c>>
+<<vector-vec_realloc-c>>
 
-  <<vector-vec_push-c>>
+<<vector-vec_push-c>>
 
-  <<vector-vec_at-c>>
+<<vector-vec_at-c>>
 
-  <<vector-vec_safe_at-c>>
+<<vector-vec_safe_at-c>>
 
-  <<vector-vec_last-c>>
+<<vector-vec_last-c>>
 
-  <<vector-vec_length_capacity-c>>
+<<vector-vec_length_capacity-c>>
 
-  <<vector-shrink_to_fit-c>>
+<<vector-shrink_to_fit-c>>
 
-  <<vector-vec_pop-c>>
+<<vector-vec_pop-c>>
 
-  <<vector-vec_maybe_delete_element-c>>
+<<vector-vec_maybe_delete_element-c>>
 
-  <<vector-vec_pop_at-c>>
+<<vector-vec_pop_at-c>>
 
-  <<vector-vec_pop-c>>
+<<vector-vec_pop-c>>
 
-  <<vector-vec_delete-c>>
+<<vector-vec_delete-c>>
 #+END_SRC
 
 And with that, we should be good! I used this library in a SOM
@@ -660,15 +660,15 @@ example of a simple org file:
 
 #+caption: Example org file
 #+begin_src org :exports code
-  ,#+title: Sample org file
-  ,* First heading
-    Reference to a subheading
-  ,* Second heading
-    Some stuff written here
-  ,** First subheading
-     Some stuff
-  ,** Second subheading
-     Some other stuff
+,#+title: Sample org file
+,* First heading
+  Reference to a subheading
+,* Second heading
+  Some stuff written here
+,** First subheading
+   Some stuff
+,** Second subheading
+   Some other stuff
 #+end_src
 
 And this is the result once exported to HTML (with a lot of noise
@@ -676,53 +676,53 @@ removed from ~<head>~):
 
 #+caption: Output HTML file
 #+BEGIN_SRC html
-  <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 
-  <head>
-      <title>Sample org file</title>
-      <meta name="generator" content="Org mode" />
-      <meta name="author" content="Lucien Cartier-Tilet" />
-  </head>
+<head>
+    <title>Sample org file</title>
+    <meta name="generator" content="Org mode" />
+    <meta name="author" content="Lucien Cartier-Tilet" />
+</head>
 
-  <body>
-      <div id="content">
-          <h1 class="title">Sample org file</h1>
-          <div id="outline-container-orgd8e6238" class="outline-2">
-              <h2 id="orgd8e6238"><span class="section-number-2">1</span> First heading</h2>
-              <div class="outline-text-2" id="text-1">
-                  <p>
-                      Reference to a subheading
-                  </p>
-              </div>
-          </div>
-          <div id="outline-container-org621c39a" class="outline-2">
-              <h2 id="org621c39a"><span class="section-number-2">2</span> Second heading</h2>
-              <div class="outline-text-2" id="text-2">
-                  <p>
-                      Some stuff written here
-                  </p>
-              </div>
-              <div id="outline-container-orgae45d6b" class="outline-3">
-                  <h3 id="orgae45d6b"><span class="section-number-3">2.1</span> First subheading</h3>
-                  <div class="outline-text-3" id="text-2-1">
-                      <p>
-                          Some stuff
-                      </p>
-                  </div>
-              </div>
-              <div id="outline-container-org9301aa9" class="outline-3">
-                  <h3 id="org9301aa9"><span class="section-number-3">2.2</span> Second subheading</h3>
-                  <div class="outline-text-3" id="text-2-2">
-                      <p>
-                          Some other stuff
-                      </p>
-                  </div>
-              </div>
-          </div>
-      </div>
-  </body>
+<body>
+    <div id="content">
+        <h1 class="title">Sample org file</h1>
+        <div id="outline-container-orgd8e6238" class="outline-2">
+            <h2 id="orgd8e6238"><span class="section-number-2">1</span> First heading</h2>
+            <div class="outline-text-2" id="text-1">
+                <p>
+                    Reference to a subheading
+                </p>
+            </div>
+        </div>
+        <div id="outline-container-org621c39a" class="outline-2">
+            <h2 id="org621c39a"><span class="section-number-2">2</span> Second heading</h2>
+            <div class="outline-text-2" id="text-2">
+                <p>
+                    Some stuff written here
+                </p>
+            </div>
+            <div id="outline-container-orgae45d6b" class="outline-3">
+                <h3 id="orgae45d6b"><span class="section-number-3">2.1</span> First subheading</h3>
+                <div class="outline-text-3" id="text-2-1">
+                    <p>
+                        Some stuff
+                    </p>
+                </div>
+            </div>
+            <div id="outline-container-org9301aa9" class="outline-3">
+                <h3 id="org9301aa9"><span class="section-number-3">2.2</span> Second subheading</h3>
+                <div class="outline-text-3" id="text-2-2">
+                    <p>
+                        Some other stuff
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
 
-  </html>
+</html>
 #+END_SRC
 
 As you can see, all the anchors are in the fomat of ~org[a-f0-9]{7}~.
@@ -781,42 +781,42 @@ The modifications I made to the first function ~eos/org-id-new~ are
 minimal, where I just split the UUID and get its first part. This is
 basically a way to simplify it.
 #+BEGIN_SRC emacs-lisp
-  (defun eos/org-id-new (&optional prefix)
-    "Create a new globally unique ID.
+(defun eos/org-id-new (&optional prefix)
+  "Create a new globally unique ID.
 
-  An ID consists of two parts separated by a colon:
-  - a prefix
-  - a   unique   part   that   will   be   created   according   to
-    `org-id-method'.
+An ID consists of two parts separated by a colon:
+- a prefix
+- a   unique   part   that   will   be   created   according   to
+  `org-id-method'.
 
-  PREFIX  can specify  the  prefix,  the default  is  given by  the
-  variable  `org-id-prefix'.  However,  if  PREFIX  is  the  symbol
-  `none', don't  use any  prefix even if  `org-id-prefix' specifies
-  one.
+PREFIX  can specify  the  prefix,  the default  is  given by  the
+variable  `org-id-prefix'.  However,  if  PREFIX  is  the  symbol
+`none', don't  use any  prefix even if  `org-id-prefix' specifies
+one.
 
-  So a typical ID could look like \"Org-4nd91V40HI\"."
-    (let* ((prefix (if (eq prefix 'none)
-                       ""
-                     (concat (or prefix org-id-prefix)
-                             "-"))) unique)
-      (if (equal prefix "-")
-          (setq prefix ""))
-      (cond
-       ((memq org-id-method
-              '(uuidgen uuid))
-        (setq unique (org-trim (shell-command-to-string org-id-uuid-program)))
-        (unless (org-uuidgen-p unique)
-          (setq unique (org-id-uuid))))
-       ((eq org-id-method 'org)
-        (let* ((etime (org-reverse-string (org-id-time-to-b36)))
-               (postfix (if org-id-include-domain
-                            (progn
-                              (require 'message)
-                              (concat "@"
-                                      (message-make-fqdn))))))
-          (setq unique (concat etime postfix))))
-       (t (error "Invalid `org-id-method'")))
-      (concat prefix (car (split-string unique "-")))))
+So a typical ID could look like \"Org-4nd91V40HI\"."
+  (let* ((prefix (if (eq prefix 'none)
+                     ""
+                   (concat (or prefix org-id-prefix)
+                           "-"))) unique)
+    (if (equal prefix "-")
+        (setq prefix ""))
+    (cond
+     ((memq org-id-method
+            '(uuidgen uuid))
+      (setq unique (org-trim (shell-command-to-string org-id-uuid-program)))
+      (unless (org-uuidgen-p unique)
+        (setq unique (org-id-uuid))))
+     ((eq org-id-method 'org)
+      (let* ((etime (org-reverse-string (org-id-time-to-b36)))
+             (postfix (if org-id-include-domain
+                          (progn
+                            (require 'message)
+                            (concat "@"
+                                    (message-make-fqdn))))))
+        (setq unique (concat etime postfix))))
+     (t (error "Invalid `org-id-method'")))
+    (concat prefix (car (split-string unique "-")))))
 #+END_SRC
 
 Next, we have here the actual generation of the custom ID. As you can
@@ -829,68 +829,68 @@ some elements such as forward slashes or tildes, and all whitespace is
 replaced by underscores. It then passes ~heading~ as an argument to the
 function described above to which the unique ID will be concatenated.
 #+BEGIN_SRC emacs-lisp
-  (defun eos/org-custom-id-get (&optional pom create prefix)
-    "Get the CUSTOM_ID property of the entry at point-or-marker POM.
+(defun eos/org-custom-id-get (&optional pom create prefix)
+  "Get the CUSTOM_ID property of the entry at point-or-marker POM.
 
-  If POM is nil, refer to the entry at point. If the entry does not
-  have an CUSTOM_ID, the function returns nil. However, when CREATE
-  is non nil, create a CUSTOM_ID if none is present already. PREFIX
-  will  be passed  through to  `eos/org-id-new'. In  any case,  the
-  CUSTOM_ID of the entry is returned."
-    (interactive)
-    (org-with-point-at pom
-      (let* ((orgpath (mapconcat #'identity (org-get-outline-path) "-"))
-             (heading (replace-regexp-in-string
-                       "/\\|~\\|\\[\\|\\]" ""
-                       (replace-regexp-in-string
-                        "[[:space:]]+" "_" (if (string= orgpath "")
-                                    (org-get-heading t t t t)
-                                  (concat orgpath "-" (org-get-heading t t t t))))))
-             (id (org-entry-get nil "CUSTOM_ID")))
-        (cond
-         ((and id
-               (stringp id)
-               (string-match "\\S-" id)) id)
-         (create (setq id (eos/org-id-new (concat prefix heading)))
-                 (org-entry-put pom "CUSTOM_ID" id)
-                 (org-id-add-location id
-                                      (buffer-file-name (buffer-base-buffer)))
-                 id)))))
+If POM is nil, refer to the entry at point. If the entry does not
+have an CUSTOM_ID, the function returns nil. However, when CREATE
+is non nil, create a CUSTOM_ID if none is present already. PREFIX
+will  be passed  through to  `eos/org-id-new'. In  any case,  the
+CUSTOM_ID of the entry is returned."
+  (interactive)
+  (org-with-point-at pom
+    (let* ((orgpath (mapconcat #'identity (org-get-outline-path) "-"))
+           (heading (replace-regexp-in-string
+                     "/\\|~\\|\\[\\|\\]" ""
+                     (replace-regexp-in-string
+                      "[[:space:]]+" "_" (if (string= orgpath "")
+                                  (org-get-heading t t t t)
+                                (concat orgpath "-" (org-get-heading t t t t))))))
+           (id (org-entry-get nil "CUSTOM_ID")))
+      (cond
+       ((and id
+             (stringp id)
+             (string-match "\\S-" id)) id)
+       (create (setq id (eos/org-id-new (concat prefix heading)))
+               (org-entry-put pom "CUSTOM_ID" id)
+               (org-id-add-location id
+                                    (buffer-file-name (buffer-base-buffer)))
+               id)))))
 #+END_SRC
 
 The rest of the code is unchanged, here it is anyway:
 #+BEGIN_SRC emacs-lisp
-  (defun eos/org-add-ids-to-headlines-in-file ()
-    "Add CUSTOM_ID properties to all headlines in the current file
-  which do not already have one.
+(defun eos/org-add-ids-to-headlines-in-file ()
+  "Add CUSTOM_ID properties to all headlines in the current file
+which do not already have one.
 
-  Only adds ids if the `auto-id' option is set to `t' in the file
-  somewhere. ie, #+OPTIONS: auto-id:t"
-    (interactive)
-    (save-excursion
-      (widen)
-      (goto-char (point-min))
-      (when (re-search-forward "^#\\+OPTIONS:.*auto-id:t"
-                               (point-max)
-                               t)
-        (org-map-entries (lambda ()
-                           (eos/org-custom-id-get (point)
-                                                  'create))))))
+Only adds ids if the `auto-id' option is set to `t' in the file
+somewhere. ie, #+OPTIONS: auto-id:t"
+  (interactive)
+  (save-excursion
+    (widen)
+    (goto-char (point-min))
+    (when (re-search-forward "^#\\+OPTIONS:.*auto-id:t"
+                             (point-max)
+                             t)
+      (org-map-entries (lambda ()
+                         (eos/org-custom-id-get (point)
+                                                'create))))))
 
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (add-hook 'before-save-hook
-                        (lambda ()
-                          (when (and (eq major-mode 'org-mode)
-                                     (eq buffer-read-only nil))
-                            (eos/org-add-ids-to-headlines-in-file))))))
+(add-hook 'org-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook
+                      (lambda ()
+                        (when (and (eq major-mode 'org-mode)
+                                   (eq buffer-read-only nil))
+                          (eos/org-add-ids-to-headlines-in-file))))))
 #+END_SRC
 
 Note that you *will need* the package ~org-id~ to make this code work. You
 simply need to add the following code before the code I shared above:
 #+BEGIN_SRC emacs-lisp
-  (require 'org-id)
-  (setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
+(require 'org-id)
+(setq org-id-link-to-org-use-id 'create-if-interactive-and-no-custom-id)
 #+END_SRC
 
 And that’s how my links are now way more readable *and* persistent! The
@@ -942,11 +942,11 @@ les droits pour utiliser ~sudo~, demande à celui qui a les droits (ton
 administrateur système ou ton papa (j’avais prévenu que je n’allais
 pas être sympa dans ce tutoriel)).
 #+BEGIN_SRC sh
-  $ apt install git                    # Debian, Ubuntu et les distros basées dessus
-  $ yum install git                    # CentOS
-  $ dnf -y install git                 # Fedora
-  $ pacman -S git                      # ArchLinux et les distros basées dessus
-  $ emerge --ask --verbose dec-vcs/git # Gentoo
+$ apt install git                    # Debian, Ubuntu et les distros basées dessus
+$ yum install git                    # CentOS
+$ dnf -y install git                 # Fedora
+$ pacman -S git                      # ArchLinux et les distros basées dessus
+$ emerge --ask --verbose dec-vcs/git # Gentoo
 #+END_SRC
 
 #+CAPTION: >install gentoo
@@ -956,9 +956,9 @@ Si tu n’es pas sous GNU/Linux mais que tu as au moins le goût d’être
 sous un OS de type Unix, tu peux exécuter la commande correspondante à
 ton OS suivant :
 #+BEGIN_SRC sh
-  $ pkg install git                                     # FreeBSD
-  $ brew install git                                    # macOS avec brew
-  $ port install git +svn +doc +bash_completion +gitweb # macOS avec MacPorts
+$ pkg install git                                     # FreeBSD
+$ brew install git                                    # macOS avec brew
+$ port install git +svn +doc +bash_completion +gitweb # macOS avec MacPorts
 #+END_SRC
 
 Si tu es sous Windows, soit tu utilises le WSL (Windows Subsystem for
@@ -971,15 +971,15 @@ Tu peux configurer Git si tu le souhaites, oui. En général, il est
 recommandé de paramétrer au moins son nom et son e-mail. Tu peux les
 paramétrer via la ligne de commande :
 #+BEGIN_SRC sh
-  $ git config --global user.name "Kévin Masturbin"
-  $ git config --global user.email "kevin.du.neuftrwa@hotmail.com"
+$ git config --global user.name "Kévin Masturbin"
+$ git config --global user.email "kevin.du.neuftrwa@hotmail.com"
 #+END_SRC
 
 Tu peux aussi éditer le fichier =~/.gitconfig= comme suit :
 #+BEGIN_SRC toml
-  [user]
-       email = ton@email.truc
-       name = Ton nom
+[user]
+     email = ton@email.truc
+     name = Ton nom
 #+END_SRC
 
 Cela permettra d’associer ton nom et ton adresse mail à tes commits.
@@ -1008,10 +1008,10 @@ Si tu souhaites créer un dépôt git, rien de plus simple : créé ton
 répertoire dans lequel tu travailleras, et déplace-y-toi. Ensuite, tu
 pourra initialiser ton dépôt via la commande ~git init~.
 #+BEGIN_SRC text
-  $ mkdir monsuperprojet
-  $ cd monsuperprojet
-  $ git init
-  Initialized empty Git repository in /tmp/monsuperprojet/.git/
+$ mkdir monsuperprojet
+$ cd monsuperprojet
+$ git init
+Initialized empty Git repository in /tmp/monsuperprojet/.git/
 #+END_SRC
 
 Si tu obtiens à peu près le même message après la dernière commande,
@@ -1020,12 +1020,12 @@ l’occurrence, j’ai créé mon dépôt dans ~/tmp~, mais toi tu peux voir un
 truc du genre ~/home/corentin/monsuperprojet~ à la place. Tu peux
 vérifier que tout va bien en rentrant la commande ~git status~.
 #+BEGIN_SRC text
-  $ git status
-  On branch master
+$ git status
+On branch master
 
-  No commits yet
+No commits yet
 
-  nothing to commit (create/copy files and use "git add" to track)
+nothing to commit (create/copy files and use "git add" to track)
 #+END_SRC
 
 Parfait ! Ah, et ne met rien d’important dans ~/tmp~, ce dossier est
@@ -1040,43 +1040,43 @@ d’abord, on va voir ce qu’il se passe si jamais on créé un fichier
 dans le dépôt. Créé un fichier ~main.c~ dans lequel tu vas entrer ce
 code :
 #+BEGIN_SRC c
-  #include <stdio.h>
+#include <stdio.h>
 
-  int main(int ac, char* av[]) {
-    printf("Hello World!\n");
-    return 0;
-  }
+int main(int ac, char* av[]) {
+  printf("Hello World!\n");
+  return 0;
+}
 #+END_SRC
 
 Bref, si tu exécutes à nouveau git status, tu obtients cette sortie :
 #+BEGIN_SRC text
-  $ git status
-  On branch master
+$ git status
+On branch master
 
-  No commits yet
+No commits yet
 
-  Untracked files:
-    (use "git add <file>..." to include in what will be committed)
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
 
-          main.c
+        main.c
 
-  nothing added to commit but untracked files present (use "git add" to track)
+nothing added to commit but untracked files present (use "git add" to track)
 #+END_SRC
 
 Tu commences à comprendre un peu le bail ? Git vient de détecter qu’un
 nouveau fichier a été créé qu’il ne connaissait pas avant. Suivons ses
 bon conseils et ajoutons le fichier au dépôt.
 #+BEGIN_SRC text
-  $ git add main.c
-  $ git status
-  On branch master
+$ git add main.c
+$ git status
+On branch master
 
-  No commits yet
+No commits yet
 
-  Changes to be committed:
-    (use "git rm --cached <file>..." to unstage)
+Changes to be committed:
+  (use "git rm --cached <file>..." to unstage)
 
-          new file:   main.c
+        new file:   main.c
 #+END_SRC
 
 Super, maintenant git va surveiller les changements du fichier, mais
@@ -1088,10 +1088,10 @@ garanti encore qu’on pourra retrouver cet état plus tard. On appelle
 apportées à un ou plusieurs fichiers (dans leur globalité ou
 partiellement, on verra ça plus tard), le tout avec un commentaire.
 #+BEGIN_SRC text
-  $ git commit -m "Un petit pas pour moi, un grand pas pour mon projet"
-  [master (root-commit) 89139ef] Un petit pas pour moi, un grand pas pour mon projet
-   1 file changed, 6 insertions(+)
-   create mode 100644 main.c
+$ git commit -m "Un petit pas pour moi, un grand pas pour mon projet"
+[master (root-commit) 89139ef] Un petit pas pour moi, un grand pas pour mon projet
+ 1 file changed, 6 insertions(+)
+ create mode 100644 main.c
 #+END_SRC
 
 Parfait ! Certains éléments peuvent être un peu différent chez toi,
@@ -1111,23 +1111,23 @@ checkout -- nomdufichier~, et tu peux aussi mettre plusieurs noms de
 fichiers. Par exemple, si j’ai modifié mon ~main.c~ en modifiant ainsi
 les arguments du ~main()~ :
 #+BEGIN_SRC c
-  #include <stdio.h>
+#include <stdio.h>
 
-  int main(void) {
-    printf("Hello World!\n");
-    return 0;
-  }
+int main(void) {
+  printf("Hello World!\n");
+  return 0;
+}
 #+END_SRC
 
 Je peux annuler tout ça via ces commandes :
 #+BEGIN_SRC text
-  $ git reset HEAD main.c
-  Unstaged changes after reset:
-  M       main.c
-  $ git checkout -- main.c
-  $ git status
-  On branch master
-  nothing to commit, working tree clean
+$ git reset HEAD main.c
+Unstaged changes after reset:
+M       main.c
+$ git checkout -- main.c
+$ git status
+On branch master
+nothing to commit, working tree clean
 #+END_SRC
 
 Si je fait un ~cat main.c~, je vois qu’il est revenu à son état initial.
@@ -1151,17 +1151,17 @@ dernier commit (mettons, tu as oublié d’ajouter également un fichier
 texte), tu peux utiliser l’option ~--amend~ lors du commit du fichier
 oublié.
 #+BEGIN_SRC text
-  $ git add main.c # J’ai refait les modifications annulées plus tôt
-  $ git commit -m "second commit"
-  [master 97f698a] second commit
-  1 file changed, 1 insertion(+), 1 deletion(-)
-  $ echo "C’est un super projet !" > projet.txt
-  $ git add projet.txt
-  $ git commit --amend -m "second commit + oubli"
-  [master 9aff4c0] second commit + oubli
-  Date: Fri Oct 5 11:10:56 2018 +0200
-  2 files changed, 2 insertions(+), 1 deletion(-)
-  create mode 100644 projet.txt
+$ git add main.c # J’ai refait les modifications annulées plus tôt
+$ git commit -m "second commit"
+[master 97f698a] second commit
+1 file changed, 1 insertion(+), 1 deletion(-)
+$ echo "C’est un super projet !" > projet.txt
+$ git add projet.txt
+$ git commit --amend -m "second commit + oubli"
+[master 9aff4c0] second commit + oubli
+Date: Fri Oct 5 11:10:56 2018 +0200
+2 files changed, 2 insertions(+), 1 deletion(-)
+create mode 100644 projet.txt
 #+END_SRC
 
 En gros, le commit que tu viens de faire a remplacé le précédent en
@@ -1182,68 +1182,68 @@ que tout ce que tu as modifié lors de ton dernier commit. Et si tu ne
 souhaite voir les modifications que d’un certain fichier, tu peux
 ajouter le nom de ton fichier à la fin de la commande.
 #+BEGIN_SRC text
-  $ echo "C’est un super projet !" > projet.txt
-  $ git diff
-  diff --git a/projet.txt b/projet.txt
-  index 03b0f20..b93413f 100644
-  --- a/projet.txt
-  +++ b/projet.txt
-  @@ -1 +1 @@
-  -projet
-  +C’est un super projet !
+$ echo "C’est un super projet !" > projet.txt
+$ git diff
+diff --git a/projet.txt b/projet.txt
+index 03b0f20..b93413f 100644
+--- a/projet.txt
++++ b/projet.txt
+@@ -1 +1 @@
+-projet
++C’est un super projet !
 #+END_SRC
 
 Tu peux également voir les différences de fichiers entre deux commits
 en entrant leur référence. Pour avoir la référence, tu peux rentrer la
 commande ~git log~ pour avoir un petit historique des commits.
 #+BEGIN_SRC text
-  $ git log
-  commit 4380d8717261644b81a1858920406645cf409028 (HEAD -> master)
-  Author: Phuntsok Drak-pa <phundrak@phundrak.fr>
-  Date:   Fri Oct 5 11:59:40 2018 +0200
+$ git log
+commit 4380d8717261644b81a1858920406645cf409028 (HEAD -> master)
+Author: Phuntsok Drak-pa <phundrak@phundrak.fr>
+Date:   Fri Oct 5 11:59:40 2018 +0200
 
-      new commit
+    new commit
 
-  commit 59c21c6aa7e3ec7edd229f81b87becbc7ec13596
-  Author: Phuntsok Drak-pa <phundrak@phundrak.fr>
-  Date:   Fri Oct 5 11:10:56 2018 +0200
+commit 59c21c6aa7e3ec7edd229f81b87becbc7ec13596
+Author: Phuntsok Drak-pa <phundrak@phundrak.fr>
+Date:   Fri Oct 5 11:10:56 2018 +0200
 
-      nouveau texte
+    nouveau texte
 
-  commit 89139ef233d07a64d3025de47f8b6e8ce7470318
-  Author: Phuntsok Drak-pa <phundrak@phundrak.fr>
-  Date:   Fri Oct 5 10:56:58 2018 +0200
+commit 89139ef233d07a64d3025de47f8b6e8ce7470318
+Author: Phuntsok Drak-pa <phundrak@phundrak.fr>
+Date:   Fri Oct 5 10:56:58 2018 +0200
 
-      Un petit pas pour moi, un grand pas pour mon projet
+    Un petit pas pour moi, un grand pas pour mon projet
 #+END_SRC
 
 Bon, c’est un peu long et un peu trop d’infos d’un coup, généralement
 je préfère taper ~git log --oneline --graph --decorate~ afin d’avoir un
 affichage comme suit :
 #+BEGIN_SRC text
-  $ git log --oneline --graph --decorate
-  ,* 4380d87 (HEAD -> master) new commit
-  ,* 59c21c6 nouveau texte
-  ,* 89139ef Un petit pas pour moi, un grand pas pour mon projet
+$ git log --oneline --graph --decorate
+,* 4380d87 (HEAD -> master) new commit
+,* 59c21c6 nouveau texte
+,* 89139ef Un petit pas pour moi, un grand pas pour mon projet
 #+END_SRC
 
 Plus propre, non ? Et les références sont plus courtes, ce qui est
 plus agréable à taper. Allez, comparons les deux derniers commits.
 #+BEGIN_SRC text
-  $ git add .
-  $ git commit -m "new commit"
-  $ git log --oneline --graph --decorate
-  ,* 4380d87 (HEAD -> master) new commit
-  ,* 59c21c6 nouveau texte
-  ,* 89139ef Un petit pas pour moi, un grand pas pour mon projet
-  $ git diff 59c21c6 4380d87
-  diff --git a/projet.txt b/projet.txt
-  index 03b0f20..b93413f 100644
-  --- a/projet.txt
-  +++ b/projet.txt
-  @@ -1 +1 @@
-  -projet
-  +C’est un super projet !
+$ git add .
+$ git commit -m "new commit"
+$ git log --oneline --graph --decorate
+,* 4380d87 (HEAD -> master) new commit
+,* 59c21c6 nouveau texte
+,* 89139ef Un petit pas pour moi, un grand pas pour mon projet
+$ git diff 59c21c6 4380d87
+diff --git a/projet.txt b/projet.txt
+index 03b0f20..b93413f 100644
+--- a/projet.txt
++++ b/projet.txt
+@@ -1 +1 @@
+-projet
++C’est un super projet !
 #+END_SRC
 
 **** Il y a des fichiers dont je me fiche dans mon dépôt
@@ -1290,8 +1290,8 @@ Par défaut une branche est créée lors de la création d’un dépôt qui
 s’appelle ~master~. Pour créer une nouvelle branche, on peut donc
 utiliser la commande ~git checkout -b nomdelanouvellebranche~.
 #+BEGIN_SRC text
-  $ git checkout -b nouvelle-branche
-  Switched to a new branch 'nouvelle-branche'
+$ git checkout -b nouvelle-branche
+Switched to a new branch 'nouvelle-branche'
 #+END_SRC
 
 À partir d’ici, toute modification apportée aux fichiers du dépôt
@@ -1304,15 +1304,15 @@ Si tu souhaites avoir une liste des branches du dépôt, tu peux taper
 ~git branch --list~. La branche active sera marquée d’une étoile à côté
 de son nom.
 #+BEGIN_SRC text
-  $ git branch --list
-    master
-  ,* nouvelle-branche
+$ git branch --list
+  master
+,* nouvelle-branche
 #+END_SRC
 
 **** J’ai accidentellement modifié des fichiers sur la mauvaise branche, mais je n’ai pas encore fait de commits.
 Tout va bien alors ! Tu vas simplement exécuter cette commande :
 #+BEGIN_SRC text
-  $ git stash
+$ git stash
 #+END_SRC
 
 Ça va déplacer toutes tes modifications que tu n’as pas encore commit
@@ -1322,13 +1322,13 @@ qu’ils étaient lors du dernier commit. Maintenant, change la branche
 sur laquelle tu travailles, par exemple tu si tu es sur la branche
 ~kevin~, tu exécutes ceci :
 #+BEGIN_SRC text
-  $ git checkout kevin
+$ git checkout kevin
 #+END_SRC
 
 Tes modifications sont toujours dans ton stack, et pour les restaurer,
 tu n’as plus qu’à exécuter
 #+BEGIN_SRC text
-  $ git stash pop
+$ git stash pop
 #+END_SRC
 
 Et voilà, tu viens de déplacer tes modifications sur la bonne branche.
@@ -1348,14 +1348,14 @@ Dans ce cas, ce que tu peux faire, c’est retourner sur ta branche
 pour faire simple, tu vas appliquer les modifications de la branche
 que tu souhaites fusionner avec ta branche ~master~ sur cette dernière.
 #+BEGIN_SRC text
-  $ git checkout master
-  Switched to branch 'master'
-  $ git merge nouvelle-branche
-  Updating 133c5b6..2668937
-  Fast-forward
-   projet.txt | 1 +
-   1 file changed, 1 insertion(+)
-   create mode 100644 projet.txt
+$ git checkout master
+Switched to branch 'master'
+$ git merge nouvelle-branche
+Updating 133c5b6..2668937
+Fast-forward
+ projet.txt | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 projet.txt
 #+END_SRC
 
 Rappelle-toi que la commande ~merge~ ramène les commits de la branche
@@ -1400,14 +1400,14 @@ en argument de git clone. Par exemple, si tu veux télécharger de dépôt
 du petit logiciel de chat en réseau que j’ai codé durant ma L2
 d’informatique, tu peux exécuter ceci :
 #+BEGIN_SRC text
-  $ git clone https://github.com/noalien/GL4Dummies.git
-  Cloning into 'GL4Dummies'...
-  remote: Enumerating objects: 682, done.
-  remote: Counting objects: 100% (682/682), done.
-  remote: Compressing objects: 100% (455/455), done.
-  remote: Total 3516 (delta 354), reused 509 (delta 215), pack-reused 2834
-  Receiving objects: 100% (3516/3516), 72.95 MiB | 2.13 MiB/s, done.
-  Resolving deltas: 100% (2019/2019), done.
+$ git clone https://github.com/noalien/GL4Dummies.git
+Cloning into 'GL4Dummies'...
+remote: Enumerating objects: 682, done.
+remote: Counting objects: 100% (682/682), done.
+remote: Compressing objects: 100% (455/455), done.
+remote: Total 3516 (delta 354), reused 509 (delta 215), pack-reused 2834
+Receiving objects: 100% (3516/3516), 72.95 MiB | 2.13 MiB/s, done.
+Resolving deltas: 100% (2019/2019), done.
 #+END_SRC
 
 Et c’est bon, tu as accès au répertoire ~GL4Dummies~ et au code source
@@ -1425,7 +1425,7 @@ avant, pas de description, pas de ~.gitignore~, RIEN.
 Et là, magie ! Github indique comment ajouter le dépôt distant à ton
 dépôt local.
 #+BEGIN_SRC text
-  $ git remote add origin https://github.com/Phundrak/temporary-repo.git
+$ git remote add origin https://github.com/Phundrak/temporary-repo.git
 #+END_SRC
 
 Et voilà, ton dépôt est lié au dépôt distant. Oui, juste comme ça.
@@ -1443,22 +1443,22 @@ mettre en ligne précisément dans le dépôt distant, auquel cas tu
 ajoutes ~-u origin master~ pour cette première fois. Git te demandera
 donc tes identifiants Github pour pouvoir mettre tout ça en ligne.
 #+BEGIN_SRC text
-  $ git push -u origin master
-  Username for 'https://github.com': phundrak
-  Password for 'https://phundrak@github.com':
-  Enumerating objects: 10, done.
-  Counting objects: 100% (10/10), done.
-  Delta compression using up to 8 threads
-  Compressing objects: 100% (7/7), done.
-  Writing objects: 100% (10/10), 940 bytes | 313.00 KiB/s, done.
-  Total 10 (delta 0), reused 0 (delta 0)
-  remote:
-  remote: Create a pull request for 'master' on GitHub by visiting:
-  remote:      https://github.com/Phundrak/temporary-repo/pull/new/master
-  remote:
-  To https://github.com/Phundrak/temporary-repo.git
-   ,* [new branch]      master -> master
-  Branch 'master' set up to track remote branch 'master' from 'origin'.
+$ git push -u origin master
+Username for 'https://github.com': phundrak
+Password for 'https://phundrak@github.com':
+Enumerating objects: 10, done.
+Counting objects: 100% (10/10), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (7/7), done.
+Writing objects: 100% (10/10), 940 bytes | 313.00 KiB/s, done.
+Total 10 (delta 0), reused 0 (delta 0)
+remote:
+remote: Create a pull request for 'master' on GitHub by visiting:
+remote:      https://github.com/Phundrak/temporary-repo/pull/new/master
+remote:
+To https://github.com/Phundrak/temporary-repo.git
+ ,* [new branch]      master -> master
+Branch 'master' set up to track remote branch 'master' from 'origin'.
 #+END_SRC
 
 Bon, là en nom d’utilisateur il y a le mien, faudra remplacer avec le
@@ -1484,19 +1484,19 @@ lequel est écrit ce tutoriel, et qui est clairement supérieur à
 Markdown). Mais il n’est pas présent dans mon dépôt local, du coup je
 vais devoir le récupérer. On va donc entrer git pull.
 #+BEGIN_SRC text
-  $ git pull
-  remote: Enumerating objects: 4, done.
-  remote: Counting objects: 100% (4/4), done.
-  remote: Compressing objects: 100% (3/3), done.
-  remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
-  Unpacking objects: 100% (3/3), done.
-  From https://github.com/Phundrak/temporary-repo
-     4380d87..8bd4896  master     -> origin/master
-  Updating 4380d87..8bd4896
-  Fast-forward
-   README.md | 2 ++
-   1 file changed, 2 insertions(+)
-   create mode 100644 README.md
+$ git pull
+remote: Enumerating objects: 4, done.
+remote: Counting objects: 100% (4/4), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+Unpacking objects: 100% (3/3), done.
+From https://github.com/Phundrak/temporary-repo
+   4380d87..8bd4896  master     -> origin/master
+Updating 4380d87..8bd4896
+Fast-forward
+ README.md | 2 ++
+ 1 file changed, 2 insertions(+)
+ create mode 100644 README.md
 #+END_SRC
 
 *** Je suis en train de travailler sur le même fichier que Ginette
@@ -1571,31 +1571,31 @@ bien même des raccourcis qui pourront t’être bien utile. Ci dessous je
 te met une partie de mon fichier de configuration avec quelques-unes
 de mes préférences et pas mal de mes alias.
 #+BEGIN_SRC toml
-  [core]
-    editor = emacsclient -c
-    whitespace = fix,-indent-with-non-tab,trailing-space
-  [web]
-    browser = firefox
-  [color]
-    ui = auto
-  [alias]
-    a = add --all
-    c = commit
-    cm = commit -m
-    cam = commit -am
-    co = checkout
-    cob = checkout -b
-    cl = clone
-    l = log --oneline --graph --decorate
-    ps = push
-    pl = pull
-    re = reset
-    s = status
-    staged = diff --cached
-    st = stash
-    sc = stash clear
-    sp = stash pop
-    sw = stash show
+[core]
+  editor = emacsclient -c
+  whitespace = fix,-indent-with-non-tab,trailing-space
+[web]
+  browser = firefox
+[color]
+  ui = auto
+[alias]
+  a = add --all
+  c = commit
+  cm = commit -m
+  cam = commit -am
+  co = checkout
+  cob = checkout -b
+  cl = clone
+  l = log --oneline --graph --decorate
+  ps = push
+  pl = pull
+  re = reset
+  s = status
+  staged = diff --cached
+  st = stash
+  sc = stash clear
+  sp = stash pop
+  sw = stash show
 #+END_SRC
 
 - ~a~ :: Permet d’ajouter d’un coup tout nouveau fichier d’un dépôt en
