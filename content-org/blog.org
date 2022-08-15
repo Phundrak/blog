@@ -4,6 +4,7 @@
 #+hugo_base_dir: ../
 #+hugo_section: ./
 #+hugo_categories: emacs linux conlanging orgmode
+#+startup: content
 
 * [EN] Open-Sourcing ALYS                                              :ALYS:
 :PROPERTIES:
@@ -77,6 +78,174 @@ above.
 * Conlanging                                                       :@conlang:
 ** TODO Writing my conlanging docs with Emacs              :emacs:conlanging:
 * Development                                                          :@dev:
+** [FR] Mettre à niveau mes sites org-mode                        :dev:emacs:
+:PROPERTIES:
+:EXPORT_FILE_NAME: mettre-a-nivea-mes-sites-org-mode
+:export_hugo_menu: :menu "main"
+:END:
+*** Le Problème
+Cela fait quelques temps que je réfléchis à une nouvelle manière de
+gérer deux de mes sites web, [[https://conlang.phundrak.com][conlang.phundrak.com]] et
+[[https://config.phundrak.com][config.phundrak.com]].
+
+Les deux sites sont actuellement générés via un export depuis org-mode
+(un des nombreux modes d’Emacs) directement vers du HTML. Sauf que
+l’organisation du fichier HTML de sortie de me plaît pas, et depuis
+plus de deux ans j’utilise un script rédigé en Dart et compilé vers
+Javascript pour réorganiser les fichiers. En soit ce ne serait pas
+trop grave si mes pages web n’étaient pas forcément lourdes. Mais
+elles le sont! La plus lourde page de mon site de linguistique fait
+232Ko (la page francophone sur le Proto-Ñyqy) et celle de mon site de
+configuration fait 5,5Mo (configuration Emacs) ! Je parle bien de
+fichiers HTML ! Il faut vraiment que ça change!
+
+*** Nouveau Framework pour le front-end
+À la base je m’étais lancé pour écrire un exporteur personnalisé pour
+exporter mes fichiers org-mode vers des fichiers JSX qui seraient
+utilisés par un projet [[https://reactjs.org/][Reac]]t, ou même [[https://nextjs.org/][Next.js]]. Mais j’ai récemment
+découvert quelque chose qui pourrait être bien plus pratique pour
+moi : [[https://vuejs.org/][Vue]] et tout particulièrement [[https://v3.nuxtjs.org/][Nuxt]] !
+
+En effet, Nuxt lit le [[https://content.nuxtjs.org/guide/writing/mdc/][MDC]], ou Markdown Components. De fait, il est
+possible avec MDC et Nuxt d’insérer dans du Markdown des composants
+Vue soit en blocs soit en inline. Et pour moi, ça change tout ! Je
+peux maintenant écrire un exporteur minimal qui se chargera simplement
+d’exporter quelques éléments personnalisés vers des composants Vue,
+voire même de simples macros org-mode pour exporter les composants
+inline.
+
+Et bien sûr, pour pallier au problème de fichiers HTML trop lourds, il
+me faudra séparer mes fichiers actuels en plusieurs fichiers, mais
+cela devrait être plus simple à gérer une fois la transition vers le
+nouveau framework effectuée.
+
+*** Et pour le backend ?
+Mais ce n’est pas tout : un élément que j’aimerais ajouter à mon site
+de linguistique serait un dictionnaire entre mes langues construites
+et d’autres langues, qu’elles soient construites ou non. Ce
+dictionnaire doit pouvoir être interactif, avec par exemple une
+recherche, une page par mot, etc.
+
+Je ne ferai certainement pas télécharger à mes utilisateurs
+l’entièreté du dictionnaire à chaque recherche d’un mot dans le
+dictionnaire, il ne peut donc pas être hébergé avec mon frontend, et
+j’aurai besoin d’un backend avec une API REST pour gérer les requêtes
+des visiteurs du site web. Maintenant la question est, quel type de
+back-end ?
+
+Tout d’abord, je vais complexifier un peu le problème : je suis un
+grand amateur de org-mode. Je pourrais gérer ça via une base de
+données classique, ajoutant chaque entrée manuellement, mais je vais
+plutôt essayer de gérer tout ça via org-mode. Les fichiers texte sont
+plus simples à versionner que des bases de données en un seul fichier
+binaire. Du coup, il va falloir que je m’écrive un nouvel exporter,
+mais lequel ?
+
+Je pourrais rédiger un exporteur pour mon fichier ~dictionnaire.org~ qui
+l’exporterait vers un fichier Json qui serait lu ensuite par mon
+backend qui extraierait et enverrai à mes utilisateurs les
+informations nécessaires. L’avantage serait de n’avoir quasiment pas
+besoin de manipuler le Json et d’en envoyer tel quel. Mais l’ouverture
+et fermeture constante du fichier n’est pas forcément la meilleure des
+idées, quoi que cela pourrait permettre de remplacer le fichier
+pendant que le backend tourne. Mais je suis sûr qu’on peut mieux
+faire.
+
+Ma solution suivante était d’utiliser EmacSQL, un paquet Emacs lui
+permettant d’interagir avec des bases de données SQLite, PostgreSQL et
+MySQL. Au moins ce serait une véritable base de données, avec
+seulement un blob binaire à mettre à jour, et ce serait
+potentiellement plus performant étant donné qu’il n’y aura qu’à ouvrir
+une fois une connexion avec elle. Mais le problème est maintenant sa
+mise à jour. Mince…
+
+Vient enfin ma troisième solution qui, je pense, sera celle que je
+vais adopter : utiliser une base de donnée type Firebase. L’idée d’un
+verrouillage fournisseur ne me plaît pas franchement, donc j’ai décidé
+d’utiliser une alternative open source et hébergeable : [[https://appwrite.io/][Appwrite]]! Je
+peux écrire sur une de ses bases de données pendant que mes
+utilisateurs peuvent la lire, donc la mise à jour n’est pas un
+problème, et je n’ai rien à mettre en ligne, seulement une série de
+requêtes à faire. Cependant, un problème reste : comment communiquer
+avec Appwrite?
+
+*** La quête pour un SDK Appwrite pour Emacs
+Hélas, j’ai beau chercher, il n’existe aucun paquet pour Emacs
+permettant une communication avec Appwrite. Mais ce n’est pas
+franchement surprenant : Appwrite n’est pas encore extrêmement
+répandu, et même Firebase ne dispose pas de paquet pour Emacs.
+
+Bien heureusement, Appwrite dispose d’une API REST assez bien
+documentée, et Emacs est capable de gérer des requêtes nativement via
+sa bibliothèque ~url~, c’est donc naturellement que j’ai commencé à
+travailler sur ~appwrite.el~, un SDK Appwrite pour du Emacs Lisp.
+J’aurais pu utiliser ~request.el~, un paquet assez populaire pour Emacs
+afin de gérer les requêtes HTTP, mais je ne suis pas grand fan de son
+workflow et je préfère limiter au maximum le nombre de dépendances
+dans mes paquets. Ce que ce paquet fait actuellement est une
+transformation des paramètres nommés que mes fonctions acceptent en un
+payload Json. Par exemple, ma fonction ~appwrite-stogare-list-buckets~
+accepte les mot-clefs ~search~, ~limit~, ~offset~, ~cursor~, ~cursor-direction~
+et ~order-type~. Ces arguments sont transformés en du Json via la
+bibliothèque native d’Emacs afin de donner ceci :
+#+begin_src js
+{
+  "search": "my search request",
+  "limit": 30,
+  "offset": 0,
+  "cursor": "",
+  "cursorDirection": "before",
+  "orderType": "ASC",
+}
+#+end_src
+
+Ce payload Json est enfin envoyé à l’API REST correspondante, en
+l’occurrence ~/v1/storage/buckets~ comme on peut le voir [[https://appwrite.io/docs/server/storage?sdk=nodejs-default#storageListBuckets][sur la
+documentation officielle]]. Bien sûr, les éléments optionels ne sont
+pas nécessairement inclus afin d’éviter à avoir à envoyer trop
+d’informations. Dans ce cas, tous les éléments du payload sont
+optionels, ce qui ferait que le ~appwrite.el~ n’enverra que src_js{{}}
+comme payload à l’API.
+
+Pour l’instant, le projet en est encore à ses débuts, mais j’ai
+commencé à travailler sur le SDK pour Appwrite que vous pouvez trouver
+sur [[https://github.com/Phundrak/appwrite.el][ce dépôt Github]].
+
+La question maintenant est : comment exporter mon dictionnaire vers
+Appwrite ? La réponse me semble relativement simple ; je pourrai
+écrire un exporteur org-mode dépendant de ~appwrite.el~ qui exportera
+pour chaque mot qu’il rencontrera un payload Json vers mon instance
+personnelle Appwrite. Et à la différence des exporteurs org-mode
+habituels, ~ox-appwrite~ n’exportera aucun fichier sur mon système.
+
+*** Conclusions
+Au fur et à mesure de mon analyse du projet et de mes besoins, je me
+suis rendu compte que j’aurai besoin d’outils plus intelligents que de
+simples pages HTML exportées automatiquement via Emacs.
+
+Ainsi, j’aurai besoin de créer un site web avec Nuxt, profitant ainsi
+de sa capacité à rendre du Markdown avec du contenu interactif,
+agissant en tant que frontend pour mon site web. Ce Markdown sera
+exporté via org-mode à partir de mes fichiers déjà existants, bien
+qu’à fragmenter afin de réduire la taille des fichiers de sortie.
+
+Le backend sera une instance Appwrite que j’hébergerai moi-même sur
+mes serveurs. Elle sera populée par un exporter org-mode custom via
+Emacs, ce qui me permettra de continuer à gérer mes dictionnaires et
+mes langues avec org-mode.
+
+Ce projet est vraiment intéressant car cela m’a incité à explorer de
+nombreuses possibilités et technologies différentes afin de trouver ce
+qui correspond le mieux à mon besoin, notamment en me rendant compte
+par exemple que React n’était pas forcément l’outil le plus adapté à
+ce projet précisément. Cela me fera également travailler sur ma
+capacité à interagir avec des backends et des API REST, tout autant du
+côté front-end pour le site web que du côté SDK avec Emacs. Enfin, la
+création de ce SDK ainsi que des exporteurs org-mode me sera bénéfique
+afin d’approfondir ma connaissance d’Emacs et du Emacs Lisp.
+
+Maintenant, au travail !
+
 ** [EN] Writing a Dynamic Array in C                                 :dev:C:
 :PROPERTIES:
 :EXPORT_FILE_NAME: writing-dynamic-vector-c
