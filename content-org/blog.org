@@ -848,8 +848,8 @@ such sa syntax manipulation can also be achieved since the syntax tree
 itself is available as an object which can be manipulated!
 
 In case you want some more information on TreeSitter itself, you can
-check out the [[https://tree-sitter.github.io/tree-sitter/][official TreeSitter website]], or you can even check this
-talk out given by TreeSitter’s creator, Max Brunsfeld.
+check out the [[https://tree-sitter.github.io/tree-sitter/][official TreeSitter website]], or you can even check [[https://www.youtube.com/watch?v=Jes3bD6P0To][this
+talk]] out (on YouTube) given by TreeSitter’s creator, Max Brunsfeld.
 
 #+begin_export html
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Jes3bD6P0To" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
