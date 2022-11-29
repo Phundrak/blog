@@ -801,6 +801,263 @@ me in the comments, through social media such as Twitter, or by email.
 Happy programming!
 
 * Emacs                                                              :@emacs:
+** Emacs 29 is nigh! What can we expect?                          :dev:emacs:
+:PROPERTIES:
+:EXPORT_FILE_NAME: emacs-29-what-can-we-expect
+:EXPORT_DATE: 2022-11-29
+:export_hugo_menu: :menu "main"
+:END:
+It [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01774.html][was announced a couple of hours ago]], Emacs 29’s branch is now cut
+from the master branch! This means the ~emacs-29~ branch will from now
+no longer receive any new feature, but only bug fixes.
+
+So, what’s new with this new major release? I skimmed over the ~NEWS~
+file, and here are the changes which I find interesting and even
+exciting for some.
+
+*** Major features
+A couple of major improvements will be most likely present, here are
+the ones that stand out the most for me.
+
+**** Eglot is now part of Emacs core
+During the last couple of years, LSP has given text editors incredible
+capabilities, giving them IDE-like features relatively easily. Aside
+from Elisp development, most of the code I write is now done with the
+help of an LSP server, running along Emacs and analyzing my code,
+suggesting and performing changes and actions for me.
+
+Several integrations of LSP exist for Emacs, such as [[https://emacs-lsp.github.io/lsp-mode/][LSP Mode]], [[https://github.com/joaotavora/eglot][Eglot]],
+and [[https://github.com/manateelazycat/lsp-bridge][lsp-bridge]]. Among the three, Eglot is now part of Emacs core! No
+longer do you need to install a package, simply register an LSP server
+and autocompletion, documentation, error detection, and other features
+will become available right away!
+
+I must admit I don’t really know Eglot, I personally use LSP Mode, but
+with this addition to Emacs core, I might attempt the switch.
+
+**** TreeSitter is also part of Emacs core
+In case you didn’t know, Emacs’ current syntax highlighting is
+currently based on a system of regexes. Although it is not the /worst/
+thing to use, it’s not the best either, and it can become quite slow
+on larger files.
+
+TreeSitter parses programming languages based into a concrete syntax
+tree. From there, not only can syntax highlighting can be done at high
+speed, but a much deeper analysis of the code is possible and actions
+such sa syntax manipulation can also be achieved since the syntax tree
+itself is available as an object which can be manipulated!
+
+In case you want some more information on TreeSitter itself, you can
+check out the [[https://tree-sitter.github.io/tree-sitter/][official TreeSitter website]], or you can even check this
+talk out given by TreeSitter’s creator, Max Brunsfeld.
+
+#+begin_export html
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Jes3bD6P0To" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+#+end_export
+
+Well, this is not a native solution in Emacs! Currently, Emacs’
+TreeSitter supports the current major modes :
+- ~typescript-ts-mode~
+- ~c-ts-mode~
+- ~c++-ts-mode~
+- ~java-ts-mode~
+- ~css-ts-mode~
+- ~json-ts-mode~
+- ~csharp-ts-mode~
+
+TreeSitter also holds for now a special status in the new ~emacs-29~
+branch since new features can still be added to it, as its merging
+with the master branch is still recent. So we might see the list of
+major modes for Emacs get a bit longer yet, especially considering
+TreeSitter tries to make adding new languages relatively easy.
+
+If you can’t wait to test TreeSitter, there is already [[https://emacs-tree-sitter.github.io/][another package]]
+available for Emacs you can use right now. Just be aware this is not
+the same package as the one that got integrated into Emacs.
+
+**** Install packages from source with ~package.el~
+If you use [[https://github.com/radian-software/straight.el][Straight]], you might be familiar with installing packages
+directly from their Git repository. Well, good news, it is now
+possible to install packages from Git using Emacs’ built-in packaging
+system ~package.el~! It can be done with the new function
+~package-vc-install~, and packages installed that way can be updated
+with ~package-vc-update~ or ~package-vc-update-all~.
+
+On the topic of ~package.el~, there is also the new function
+~package-report-bug~ which allows Emacs users to report bugs to the
+developers of a package directly from Emacs! Be aware though, it only
+works for packages installed through ~package.el~. Since I’m a
+[[https://github.com/jwiegley/use-package][~use-package~]] and ~straight.el~ user, there is no package listed when I
+invoke the command.
+
+**** Pure GTK Emacs is here for Wayland!
+One of the major issues Emacs had on Linux was its dependency on Xorg
+when running in GUI mode. When running Xorg, it’s not really an issue,
+but Wayland has become more and more common during the last years, and
+even with the existence of XWayland, this became an annoyance.
+
+Well, fear not, for pure GTK Emacs is here! It can now be built
+Xorg-free and run natively in Wayland!
+
+Be aware though that Wayland is basically the only use-case for pure
+GTK Emacs. If you don’t use Wayland, Emacs will display a warning
+message, as it will most likely cause issues if you are running Xorg.
+In my case, I sometimes see some ghost text when the content of a
+buffer updates (I still need pure GTK though, since I alternate
+between Xorg and Wayland).
+
+**** Compile EmacsLisp files ahead of time
+With Emacs 28 came the ability to natively compile EmacsLisp if your
+Emacs was built with the ability to do so, using GCC’s Just In Time
+library. This results in quite the impressive boost in performance,
+which made Emacs much snappier than it was before. The only issue I
+had was Emacs would only compile its EmacsLisp files when they were
+loaded for the first time.
+
+This is no longer the case! If you now compile Emacs with
+~--with-native-compilation=aot~, Emacs’ native EmacsLisp files will be
+natively compiled along with Emacs itself! Be aware though, it can be
+slow on most machines, so the time you save by not compiling these
+files when launching Emacs for the first time is basically transferred
+to when compiling Emacs itself. Is it worth your time? In my case, I
+would say yes, because when I compile Emacs, I’m generally not in a
+hurry. But in your case? Well, test it out and see for yourself.
+
+**** Native access to SQLite databases
+Emacs can now be built with native support for SQLite and the sqlite3
+library. In fact, this is now a default behaviour, since you need to
+pass ~--without-sqlite3~ to Emacs’ build configuration script in order
+to prevent it.
+
+This comes with a new ~sqlite-mode~ which allows you to explore SQLite
+databases within Emacs and to interact with them. Check out the
+~sqlite-mode-open-file~ function!
+
+**** HaikuOS support
+For all three HaikuOS users out there, good news, you now have access
+to Emacs! (In all seriousness, I should check out HaikuOS one day)
+
+Moreover, it also supports an optional window-system port to Haiku
+with ~--with-be-app~. Be aware, you will need the Haiku Application Kit
+development headers and a C++ compiler. Otherwise, Emacs will only run
+in the terminal. If you want to also add Cairo to the mix, you can add
+~--with-be-cairo~.
+
+**** New major mode for C#
+~csharp-mode~ is now a native major mode for Emacs and is based on ~cc-mode~.
+
+*** Minor features
+**** It’s easier to use Emacs in scripts!
+If you like to write scripts and especially writing Lisp scripts,
+Emacs now supports the option ~-x~ in order to execute scripts written
+in EmacsLisp. When executing such a script with ~#!/usr/bin/emacs -x~ as
+its shebang, Emacs will not read its init file (like with ~-Q~) and will
+instead execute the Elisp code right away and return the last value to
+the caller of the script (most likely the shell you called the script
+from).
+
+**** TRAMP natively supports Docker, Podman, and Kubernetes
+Three new connections are now available for TRAMP:
+- ~docker~
+- ~podman~
+- ~kubernetes~
+You will now be able to access your containerized environment right
+from Emacs without the need to write custom code.
+
+**** Custom user directory
+It is now easier to launch custom Emacs profiles without the need of
+tools such as [[https://github.com/plexus/chemacs2][chemacs2]] with the addition of the flag ~--init-directory~.
+This can set to any directory Emacs’ ~user-emacs-directory~ which
+includes the ~init.el~ which comes along with it. Yet another reason for
+me not to use a ~.emacs~ file, but the ~init.el~ file instead.
+
+**** Support for Webp images
+For quite some time, Emacs has been able to display images, but not
+webp yet. Well, this is now fixed! And in fact, support for webp
+images became the default behaviour, since you need to pass
+~--without-webp~ to Emacs’ configuration script to disable webp support.
+
+**** C++ mode now supports the C++20 standard
+Yep. There’s nothing more to say, really. Happy coding!
+
+**** Better handling of ~.pdmp~ files
+Emacs has had for a few version the ability to dump its state into a
+~pdmp~ file for faster startup time. Well now, when creating such a
+file, it will include in its name a fingerprint of its current state,
+although it will still prioritize an ~emacs.pdmp~ file if it exists.
+
+**** Better mouse and touchpad support
+Emacs now uses XInput 2, which enables Emacs to support more input
+events, such as touchpad events. For instance, by default, a pinch
+gesture on a touchpad increases or decreases the text size of the
+current buffer. This is thanks to the new event ~pinch~, which comes
+along with ~touch-end~.
+
+**** Unicode 15.0 and emojis
+Emacs now supports [[https://www.unicode.org/versions/Unicode15.0.0/][Unicode 15.0]], which is currently the latest Unicode
+version. Although this is not directly related, quite a few new
+emoji-related features have been introduced. The new prefix ~C-x 8 e~
+now leads to a few new commands related to emojis:
+- ~C-x 8 e e~ or ~C-x 8 e i~ :: Insert an emoji (~emoji-insert~)
+- ~C-x 8 e s~ :: Search an emoji (~emoji-search~)
+- ~C-x 8 e l~ :: List all emojis in a new buffer (~emoji-list~)
+- ~C-x 8 e r~ :: Insert a recently inserted emoji (~emoji-recent~)
+- ~C-x 8 e d~ :: Describe an emoji (~emoji-describe~)
+- ~C-x 8 e +~ and ~C-x 8 e -~ :: Increase and decrease the size of any
+  character, but especially emojis (~emoji-zoom-increase~ and
+  ~emoji-zoom-decrease~ respectively)
+
+There is also the new input method ~emoji~ which allows you to type for
+instance ~:grin:~ in order to get the emoji 😁.
+
+**** True background transparency
+Up until recently, if you wanted transparency with Emacs, you had no
+choice but to make the whole frame transparent, including text and
+images.
+
+Thanks to the frame parameter ~alpha-background~ and its related
+~alphaBackground~ X resource, it is now possible to set transparency
+only for the frame’s background without affecting any of the other
+elements on screen.
+
+**** WebKit inspector in Emacs’ WebKit widget browser
+You can now access the WebKit inspector when using the WebKit widget
+browser in Emacs, given you are using a version of Emacs which has
+been compiled with it. I wish there was a keybinding or at leas a
+function for it, but apparently you can only open it with a right
+click and select /Inspect Element/. Still nice to have.
+
+**** Some news for Windows
+Although it has been available for Linux users since Emacs 26.1,
+Windows finally has access to double-buffering to reduce display
+flicker. If you wish to disable it, you can set the frame parameter
+~inhibit-double-buffering~ to ~nil~.
+
+Emacs also follows Windows’ dark mode with Windows 10 (version 1809)
+and onwards.
+
+Emacs also now uses Windows’ native API to render images. This
+includes BMP, GIF, JPEG, PNG, and TIFF images. Other formats, however,
+still rely on other dependencies and libraries to properly work, such
+as Webp images.
+
+*** What’s next?
+With Emacs 29 being cut, development on the master branch will now go
+towards Emacs 30. Is there anything we can expect yet?
+
+It’s still very early to say, most stable features merged into master
+went to Emacs 29, and only the ~feature/pkg~ and
+~feature/improved-lock-narrowing~ branches seem to have received commits
+less than a week prior to the day of writing this, and I do not know
+the status of other branches that received commits during the past few
+weeks such as ~feature/packgae+vc~ or ~feature/eglot2emacs~ (which I
+assume both got merged).
+
+However, there are currently talks about including ~use-package~ into
+Emacs! I’m a bit disappointed it won’t make it into Emacs 29, but
+progress is being made on ~scratch/use-package~, and you can always
+check the mailing list to check its status such as [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01533.html][here]].
+
 ** [EN] Automatic Meaningful Custom IDs for Org Headings :emacs:orgmode:dev:
 :PROPERTIES:
 :EXPORT_FILE_NAME: better-custom-ids-orgmode
