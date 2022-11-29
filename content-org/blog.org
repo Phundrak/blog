@@ -855,7 +855,7 @@ talk]] out (on YouTube) given by TreeSitter’s creator, Max Brunsfeld.
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Jes3bD6P0To" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 #+end_export
 
-Well, this is not a native solution in Emacs! Currently, Emacs’
+Well, this is now a native solution in Emacs! Currently, Emacs’
 TreeSitter supports the current major modes :
 - ~typescript-ts-mode~
 - ~c-ts-mode~
