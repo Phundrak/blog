@@ -1008,7 +1008,7 @@ now leads to a few new commands related to emojis:
   ~emoji-zoom-decrease~ respectively)
 
 There is also the new input method ~emoji~ which allows you to type for
-instance ~:grin:~ in order to get the emoji 😁.
+instance ~:⁣grin:~ in order to get the emoji 😁.
 
 **** True background transparency
 Up until recently, if you wanted transparency with Emacs, you had no
