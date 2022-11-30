@@ -815,6 +815,8 @@ So, what’s new with this new major release? I skimmed over the ~NEWS~
 file, and here are the changes which I find interesting and even
 exciting for some.
 
+*Article updated on November 30th at 13:15 UTC*
+
 *** Major features
 A couple of major improvements will be most likely present, here are
 the ones that stand out the most for me.
@@ -835,43 +837,46 @@ will become available right away!
 I must admit I don’t really know Eglot, I personally use LSP Mode, but
 with this addition to Emacs core, I might attempt the switch.
 
-**** TreeSitter is also part of Emacs core
+**** Tree-Sitter is also part of Emacs core
 In case you didn’t know, Emacs’ current syntax highlighting is
 currently based on a system of regexes. Although it is not the /worst/
 thing to use, it’s not the best either, and it can become quite slow
 on larger files.
 
-TreeSitter parses programming languages based into a concrete syntax
+Tree-Sitter parses programming languages based into a concrete syntax
 tree. From there, not only can syntax highlighting can be done at high
 speed, but a much deeper analysis of the code is possible and actions
-such sa syntax manipulation can also be achieved since the syntax tree
+such as syntax manipulation can also be achieved since the syntax tree
 itself is available as an object which can be manipulated!
 
-In case you want some more information on TreeSitter itself, you can
-check out the [[https://tree-sitter.github.io/tree-sitter/][official TreeSitter website]], or you can even check this
-talk out given by TreeSitter’s creator, Max Brunsfeld.
+In case you want some more information on Tree-Sitter itself, you can
+check out the [[https://tree-sitter.github.io/tree-sitter/][official Tree-Sitter website]], or you can even check this
+talk out given by Tree-Sitter’s creator, Max Brunsfeld.
 
 #+begin_export html
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Jes3bD6P0To" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 #+end_export
 
 Well, this is now a native solution in Emacs! Currently, Emacs’
-TreeSitter supports the current major modes :
-- ~typescript-ts-mode~
+Tree-Sitter supports the current major modes :
+- ~bash-ts-mode~
 - ~c-ts-mode~
 - ~c++-ts-mode~
-- ~java-ts-mode~
-- ~css-ts-mode~
-- ~json-ts-mode~
 - ~csharp-ts-mode~
+- ~css-ts-mode~
+- ~java-ts-mode~
+- ~js-ts-mode~
+- ~json-ts-mode~
+- ~python-ts-mode~
+- ~typescript-ts-mode~
 
-TreeSitter also holds for now a special status in the new ~emacs-29~
+Tree-Sitter also holds for now a special status in the new ~emacs-29~
 branch since new features can still be added to it, as its merging
 with the master branch is still recent. So we might see the list of
 major modes for Emacs get a bit longer yet, especially considering
-TreeSitter tries to make adding new languages relatively easy.
+Tree-Sitter tries to make adding new languages relatively easy.
 
-If you can’t wait to test TreeSitter, there is already [[https://emacs-tree-sitter.github.io/][another package]]
+If you can’t wait to test Tree-Sitter, there is already [[https://emacs-tree-sitter.github.io/][another package]]
 available for Emacs you can use right now. Just be aware this is not
 the same package as the one that got integrated into Emacs.
 
@@ -889,6 +894,18 @@ developers of a package directly from Emacs! Be aware though, it only
 works for packages installed through ~package.el~. Since I’m a
 [[https://github.com/jwiegley/use-package][~use-package~]] and ~straight.el~ user, there is no package listed when I
 invoke the command.
+
+**** Org mode 9.6
+
+As confirmed by one of org-mode maintainers [[https://bzg.fr/][Bastien Guerry]] on [[https://lists.sr.ht/~bzg/emacsfr/%3C87bkophdzo.fsf%40phundrak.com%3E#%3C87tu2hqf4h.fsf@gnu.org%3E][a
+French-speaking Emacs mailing list]], Org 9.6 is set to be part of
+Emacs 29! I may try to write an article on this new release too, which
+is [[https://elpa.gnu.org/packages/org.html][already available on GNU ELPA]]!
+
+**** use-package in Emacs core
+It has also been confirmed on the [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01821.html][Emacs development mailing list]] that
+[[https://github.com/jwiegley/use-package][~use-package~]], an awesome package manager, is set to be part of Emacs
+29, although it initially wasn’t included in the ~emacs-29~ branch.
 
 **** Pure GTK Emacs is here for Wayland!
 One of the major issues Emacs had on Linux was its dependency on Xorg
@@ -1050,13 +1067,10 @@ went to Emacs 29, and only the ~feature/pkg~ and
 ~feature/improved-lock-narrowing~ branches seem to have received commits
 less than a week prior to the day of writing this, and I do not know
 the status of other branches that received commits during the past few
-weeks such as ~feature/packgae+vc~ or ~feature/eglot2emacs~ (which I
+weeks such as ~feature/package+vc~ or ~feature/eglot2emacs~ (which I
 assume both got merged).
 
-However, there are currently talks about including ~use-package~ into
-Emacs! I’m a bit disappointed it won’t make it into Emacs 29, but
-progress is being made on ~scratch/use-package~, and you can always
-check the mailing list to check its status such as [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01533.html][here]].
++However, there are currently talks about including ~use-package~ into Emacs! I’m a bit disappointed it won’t make it into Emacs 29, but progress is being made on ~scratch/use-package~, and you can always check the mailing list to check its status such as [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01533.html][here]].+ *Update*: Rejoice! As mentioned above, ~use-package~ is actually set to land in Emacs 29!
 
 ** [EN] Automatic Meaningful Custom IDs for Org Headings :emacs:orgmode:dev:
 :PROPERTIES:
