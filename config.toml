@@ -60,3 +60,8 @@ enableEmoji = true
    primaryColor = "#8fbcbb"
    lightColor = "#d8dee9"
    lightestColor = "#eceff4"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
