@@ -1341,11 +1341,6 @@ not automatically updated. I could fix that by regenerating the custom
 ID on each save, regardless of whether a custom ID already exists or
 not, but it’s at the risk an ID manually set will get overwritten.
 
-#+begin_html
-<script defer src="https://commento.phundrak.com/js/commento.js"></script>
-<div id="commento"></div>
-#+end_html
-
 * Linux                                                              :@linux:
 ** [Fr] Tutoriel Git et Github                  :linux:git:tutorial:tutoriel:
 :PROPERTIES:
@@ -2090,11 +2085,6 @@ Si jamais tu as une question, n’hésite pas à m’envoyer un mail à
 viens de dire dans ce tutoriel, ou si tu as une suggestion, c’est
 justement le moment de mettre en pratique ce que tu as lu un peu plus
 haut et d’ouvrir une issue sur Github sur le [[https://github.com/Phundrak/tutoriel-git][dépôt de ce tutoriel]].
-
-#+begin_html
-<script defer src="https://commento.phundrak.com/js/commento.js"></script>
-<div id="commento"></div>
-#+end_html
 
 ** [EN] My YouTube subscriptions as an RSS feed         :linux:dev:tutorial:
 :PROPERTIES:
