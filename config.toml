@@ -32,7 +32,7 @@ enableEmoji = true
 
   [[params.social]]
     name = "flag"
-    url = "https://langue.phundrak.com"
+    url = "https://conlang.phundrak.com"
 
   [[params.social]]
     name = "twitter"
@@ -41,10 +41,6 @@ enableEmoji = true
   [[params.social]]
     name = "youtube"
     url = "https://www.youtube.com/channel/UCzCoUEjbFnB_-5BF7dqVCCw"
-
-  [[params.social]]
-    name = "instagram"
-    url = "https://instagram.com/phundrak"
 
   [[params.social]]
     name = "mail"
