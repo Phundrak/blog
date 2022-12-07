@@ -3,7 +3,7 @@ languageCode = "en-us"
 copyright = "This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License."
 title = "Phundrak’s rambling"
 theme = "m10c"
-paginate = 5
+paginate = 10
 enableInlineShortcodes = true
 staticDir = ["static"]
 
