@@ -805,6 +805,7 @@ Happy programming!
 :PROPERTIES:
 :EXPORT_FILE_NAME: emacs-29-what-can-we-expect
 :EXPORT_DATE: 2022-11-29
+:EXPORT_OPTIONS: toc:2
 :export_hugo_menu: :menu "main"
 :END:
 It [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01774.html][was announced a couple of hours ago]], Emacs 29’s branch is now cut
@@ -815,7 +816,7 @@ So, what’s new with this new major release? I skimmed over the ~NEWS~
 file, and here are the changes which I find interesting and even
 exciting for some.
 
-*Article updated on November 30th at 13:15 UTC*
+*Article updated on December 22nd at 14:05 UTC*
 
 *** Major features
 A couple of major improvements will be most likely present, here are
@@ -899,8 +900,8 @@ invoke the command.
 
 As confirmed by one of org-mode maintainers [[https://bzg.fr/][Bastien Guerry]] on [[https://lists.sr.ht/~bzg/emacsfr/%3C87bkophdzo.fsf%40phundrak.com%3E#%3C87tu2hqf4h.fsf@gnu.org%3E][a
 French-speaking Emacs mailing list]], Org 9.6 is set to be part of
-Emacs 29! I may try to write an article on this new release too, which
-is [[https://elpa.gnu.org/packages/org.html][already available on GNU ELPA]]!
+Emacs 29! There is an [[https://orgmode.org/Changes.htm][official article]] on this release, which is
+[[https://elpa.gnu.org/packages/org.html][already available on GNU ELPA]]!
 
 **** use-package in Emacs core
 It has also been confirmed on the [[https://lists.gnu.org/archive/html/emacs-devel/2022-11/msg01821.html][Emacs development mailing list]] that
