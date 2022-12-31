@@ -40,7 +40,7 @@ enableEmoji = true
 
   [[params.social]]
     name = "youtube"
-    url = "https://www.youtube.com/channel/UCzCoUEjbFnB_-5BF7dqVCCw"
+    url = "https://www.youtube.com/@phundrak"
 
   [[params.social]]
     name = "mail"
