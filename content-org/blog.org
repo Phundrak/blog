@@ -900,7 +900,7 @@ invoke the command.
 
 As confirmed by one of org-mode maintainers [[https://bzg.fr/][Bastien Guerry]] on [[https://lists.sr.ht/~bzg/emacsfr/%3C87bkophdzo.fsf%40phundrak.com%3E#%3C87tu2hqf4h.fsf@gnu.org%3E][a
 French-speaking Emacs mailing list]], Org 9.6 is set to be part of
-Emacs 29! There is an [[https://orgmode.org/Changes.htm][official article]] on this release, which is
+Emacs 29! There is an [[https://orgmode.org/Changes.html][official article]] on this release, which is
 [[https://elpa.gnu.org/packages/org.html][already available on GNU ELPA]]!
 
 **** use-package in Emacs core
