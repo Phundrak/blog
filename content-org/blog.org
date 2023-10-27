@@ -446,13 +446,13 @@ then a sixteen-slots array. And in a couple more calls to ~realloc~,
 we’ll quickly reach our tens of thousands slots array, way faster than
 by incrementing its capacity one by one.
 
-/“But, we’ll end up with a lot of unused memory if we need just one  more element than 2^{16} elements! We don’t need a 2^{32} elements array for 2^{16}+1 elements!”/
+/“But, we’ll end up with a lot of unused memory if we need just one  more element than 2^{16} elements! We don’t need a 2^{17} elements array for 2^{16}+1 elements!”/
 
 You’re completely right, but that’s a tradeoff. Would you rather have
 a slow but memory-efficient program, or a fast but memory-hungry
 software? Plus, as you’ll see later, there is a function to shrink the
 size of the allocated array down to the actual amount of elements you
-stored in it, making it possible to temporarily have a 2^{32} elements
+stored in it, making it possible to temporarily have a 2^{17} elements
 array, and immediately after shrink it down to 2^{16}+1, once you know
 you won’t be adding any other elements.
 
