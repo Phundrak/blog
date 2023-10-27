@@ -2,12 +2,6 @@ kind: pipeline
 name: default
 
 steps:
-# - name: prepare
-#   image: alpine
-#   commands:
-#     - apk add git
-#     - git submodule update --init --recursive
-
 - name: build
   image: silex/emacs:27-alpine
   commands:
@@ -32,6 +26,23 @@ steps:
       from_secret: ssh_password
     port:
       from_secret: ssh_port
+  when:
+    branch:
+    - master
+    event:
+      exclude:
+      - pull_request
+
+- name: purge cache
+  image: jetrails/drone-cloudflare-caching
+  settings:
+    api_token:
+      from_secret: cloudflare_cache_api
+    zone_identifier:
+      from_secret: phundrak_com_zone_id
+    action: purge_files
+    list:
+    - https://blog.phundrak.com
   when:
     branch:
     - master
