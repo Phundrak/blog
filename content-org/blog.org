@@ -1047,7 +1047,7 @@ elements on screen.
 **** WebKit inspector in Emacs’ WebKit widget browser
 You can now access the WebKit inspector when using the WebKit widget
 browser in Emacs, given you are using a version of Emacs which has
-been compiled with it. I wish there was a keybinding or at leas a
+been compiled with it. I wish there was a keybinding or at least a
 function for it, but apparently you can only open it with a right
 click and select /Inspect Element/. Still nice to have.
 
