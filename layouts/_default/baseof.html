@@ -5,15 +5,49 @@
     <meta charset="utf-8" />
     {{ hugo.Generator }}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="author" content="{{ .Site.Params.author | default "Lucien Cartier-Tilet" }}" />
+    <meta name="author" content="{{ .Site.Params.author | default "John Doe" }}" />
     <meta name="description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Description }}{{ end }}" />
     {{ $style := resources.Get "css/main.scss" | resources.ExecuteAsTemplate "css/main.scss" . | resources.ToCSS | resources.Minify | resources.Fingerprint -}}
     <link rel="stylesheet" href="{{ $style.Permalink }}" />
 
+    {{ template "_internal/google_analytics.html" . }}
     {{ template "_internal/twitter_cards.html" . }}
     {{ template "_internal/opengraph.html" . }}
 
     <style>
+    .commento-root .commento-anonymous-checkbox-container input[type="checkbox"] + label,
+    .commento-root .commento-mod-tools button,
+    .commento-root-font * {
+      color: #eceff4 !important;
+    }
+    .commento-root .commento-footer .commento-logo-container .commento-logo-text {
+      color: #34495e !important;
+    }
+    .commento-root .commento-dark-card {
+      background-color: #d08770 !important;
+    }
+    .commento-root input[type="text"], .commento-root textarea {
+      color: #2e3440 !important;
+    }
+    .commento-root .commento-mod-tools::before {
+      color: #b48ead !important;
+    }
+    .commento-root .commento-submit-button {
+      background: #5e81ac !important;
+    }
+
+    .commento-login-box {
+      background: #3b4252;
+    }
+
+    .commento-input::placeholder {
+      color:#d8dee9;
+    }
+
+    .commento-root .commento-login-box-container .commento-login-box .commento-email-container .commento-email .commento-email-button {
+      background: #d8dee9
+    }
+
     p code {
       font-family: monospace,monospace;
       font-size: 1em;
@@ -42,7 +76,7 @@
   </head>
   <body>
     <header class="app-header">
-      <a href="{{ .Site.BaseURL }}"><img class="app-header-avatar" src="{{ .Site.Params.avatar | default "avatar.jpg" | relURL }}" alt="{{ .Site.Params.author | default "Lucien Cartier-Tilet" }}" /></a>
+      <a href="{{ .Site.BaseURL }}"><img class="app-header-avatar" src="{{ .Site.Params.avatar | default "avatar.jpg" | relURL }}" alt="{{ .Site.Params.author | default "John Doe" }}" /></a>
       <h1>{{ .Site.Title }}</h1>
       <p>{{ .Site.Params.description | default "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vehicula turpis sit amet elit pretium." }}</p>
       <div class="app-header-social">
