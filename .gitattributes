@@ -1,0 +1,2 @@
+*.org linguist-detectable
+docs/* -linguist-documentation
