@@ -807,7 +807,96 @@ me in the comments, through social media such as Twitter, or by email.
 Happy programming!
 
 * Emacs                                                              :@emacs:
-** Emacs 29 is nigh! What can we expect?                          :dev:emacs:
+
+** f.el v0.21.0 released!                                 :dev:emacs:release:
+:PROPERTIES:
+:EXPORT_FILE_NAME: f-el-v0-21-0-released
+:EXPORT_DATE: 2024-10-03
+:EXPORT_OPTIONS: toc:2
+:export_hugo_menu: :menu "main"
+:END:
+
+*** Introduction
+Today, a new stable version of [[https://github.com/rejeep/f.el][f.el]], a /modern API for working with
+files and directories in Emacs/, was released after six years!
+
+While Melpa users should not see any difference since this release,
+Melpa Stable users should be able to upgrade from =f.el= 0.20 to =f.el=
+0.21 within a few hours after the publication of this blog post.
+
+*** What’s New?
+A few new features landed in =f.el= 0.21, namely:
+- =f-change-time=, =f-modification-time=, and =f-access-time=, three new
+  functions that can help users to deal with the atime, mtime, and
+  ctime of a file. Thanks to [[https://github.com/ebpa][Erik Anderson]] for his contribution!
+- =f-newer-p=, =f-same-time-p=, and =f-older-p=, building on the above
+  mentioned functions to compare the atime, mtime, or ctime of to
+  files.
+- =f-mkdir-full-path= allows you to create a directory from a fully
+  written path, such as =(f-mkdir-full-path "some/sub/directory")=. This
+  is complementary to the =f-mkdir= function which requires to write
+  =(f-mkdir "some" "sub" "directory")= instead.
+- A shortdoc implementation is available for =f.el= for Emacs 28 and
+  above. Simply execute =M-x shortdoc f= and explore your new built-in
+  cheat!
+
+Some fixes, improvements, and clarifications were also implemented in
+=f.el= 0.21. To get a full list, head over to the [[https://github.com/rejeep/f.el/blob/master/CHANGELOG.org#v0210][changelog]].
+
+It is important to note, however, that support for Emacs 24 is dropped
+with this release. If you are still using this Emacs version, I urge
+you to upgrade to at least Emacs 25 -- and honestly, you are missing
+out on a lot of things, just take a look at [[https://blog.phundrak.com/emacs-29-what-can-we-expect][my previous blog post]] on
+what Emacs 29 brought to the table!
+
+*** What now?
+As you can see, only a few things were added to =f.el= in the six years
+and a half between the 0.20 release and the present 0.21 release.
+Personally, I would say =f.el= is pretty complete right now, with a
+minimal amount of bugs. Of course, I am not saying we are entirely
+bug-free, we still have a few issues open on the Github repository.
+
+However, there are still things to do still! Here are some suggestions
+if you feel like contributing.
+
+**** Help with open PRs
+At the time of writing this blog post, there are
+four PRs open. You can weigh in if a decision is needed, or you can
+help in case of technical difficulties from the PR’s author
+
+**** Implement new features
+The [[https://github.com/rejeep/f.el/issues/18][issue #18]] suggests the creation of =f.el=
+functions for =chmod= and =chown= utilities. If you feel like you can
+write such functions, feel free to contribute!
+
+**** Improvements over existing features
+Some functions may not be complete, or may lack some features. For
+instance, =f-hidden-p= only works with the UNIX-style of hiding files
+and directories by prepending their name with a dot, like =.file.el= or
+=.hidden/file.el=. This does not necessarily work on Windows, but so
+far, attempts at creating a Windows-native solution resulted in
+failure due to the time required to make a Windows-native request on
+whether a file or folder is hidden. If you find a performant solution,
+feel free to contribute!
+
+**** Documentation improvement
+While I don’t have any specific example in mind, if you feel like some
+documentation could be improved, both its content or how it is
+presented, you are as well very welcome to contribute to the project.
+
+*** Conclusions
+I became the maintainer of =f.el= some two years ago, as [[https://github.com/rejeep][Johan
+Andersson]], the owner of =f.el=, lacked time to maintain it himself. It
+has definitively been an interesting experience. Although I currently
+have a lot less time to make things for Emacs myself, I am
+definitively looking forward what will become of this library, and I
+hope I will be able to accompany anyone willing to contribute to this
+project.
+
+Thank you to everyone who made this new version possible! Let’s do our
+best for =f.el= version 0.22!
+
+** Emacs 29 is nigh! What can we expect?                  :dev:emacs:release:
 :PROPERTIES:
 :EXPORT_FILE_NAME: emacs-29-what-can-we-expect
 :EXPORT_DATE: 2022-11-29
