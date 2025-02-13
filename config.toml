@@ -3,20 +3,22 @@ languageCode = "en-us"
 copyright = "This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License."
 title = "Phundrak’s rambling"
 theme = "m10c"
-paginate = 10
 enableInlineShortcodes = true
 staticDir = ["static"]
 
 summarylength = 10
 enableEmoji = true
 
-[author]
-  name = "Lucien Cartier-Tilet"
+[pagination]
+  pagerSize = 10
 
 [params]
-  author = "Lucien Cartier-Tilet"
   description = "Some random rambling by a linguistics nerd about Emacs, Linux, and conlanging"
   avatar = "leon.png"
+
+  [params.author]
+    name = "Lucien Cartier-Tilet"
+    email = "lucien@phundrak.com"
 
   [[params.social]]
     name = "github"
@@ -36,7 +38,7 @@ enableEmoji = true
 
   [[params.social]]
     name = "twitter"
-    url = "https://twitter.com/phundrak"
+    url = "https://mastodon.phundrak.com/phundrak"
 
   [[params.social]]
     name = "youtube"

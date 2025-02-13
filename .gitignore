@@ -4,3 +4,4 @@
 /content/*.md
 /.hugo_build.lock
 /build/
+/blog/
