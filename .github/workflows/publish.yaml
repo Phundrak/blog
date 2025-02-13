@@ -1,0 +1,33 @@
+name: publish
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Clone submodules"
+        run: |
+          git submodule update --init --recursive
+          mkdir -p blog
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+      - uses: purcell/setup-emacs@master
+        with:
+          version: 29.1
+      - name: "Export org to md"
+        run: emacs -Q --script .export.el
+      - name: "Hugo export"
+        run: hugo -d blog
+      - name: "Deploy to Cloudflare Pages"
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_SECRET }}
+          accountId: ${{ secrets.ACCOUNT_ID }}
+          command: pages deploy blog/ --project-name=blog-phundrak-com
+          gitHubToken: ${{ secrets.TOKEN }}
